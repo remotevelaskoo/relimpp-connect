@@ -16,5 +16,6 @@ O formato seguirá os princípios de **Keep a Changelog** e versionamento semân
 - CRUD e edição de filiais, departamentos, obras e centros de custo, com componente de UI reutilizável e status ativo/inativo.
 - Exclusão de empresas (com guarda de dependências) e de unidades organizacionais, com confirmação na interface.
 - Menu lateral agrupado em uma seção "Cadastros".
+- Módulo de Compras (MVP 1): solicitação de compra com itens, fluxo de aprovação (rascunho → em aprovação → aprovada/rejeitada/devolvida/cancelada) e timeline de eventos por solicitação.
 - Schema Prisma inicial do Core Platform, migração `init` e seed (papéis, permissões, categorias e usuário administrador).
 - `docker-compose.dev.yml` (PostgreSQL) e arquivos `.env.example` de backend e frontend.
