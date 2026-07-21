@@ -1,0 +1,17 @@
+name,description
+epic,Grande capacidade do produto
+story,Valor funcional percebido pelo usuário
+task,Tarefa técnica
+bug,Comportamento incorreto
+idea,Proposta ainda não aprovada
+architecture,Arquitetura e decisões técnicas
+backend,API e regras de negócio
+frontend,Interface web
+database,Banco e modelo de dados
+devops,Infraestrutura e automação
+documentation,Documentação
+security,Segurança e privacidade
+ux,Experiência e interface
+qa,Testes e qualidade
+blocked,Item impedido
+priority-critical,Prioridade crítica
