@@ -8,6 +8,10 @@ import { api, clearToken, getToken } from '@/lib/api';
 const MENU = [
   { href: '/dashboard', label: 'Início' },
   { href: '/dashboard/empresas', label: 'Empresas' },
+  { href: '/dashboard/filiais', label: 'Filiais' },
+  { href: '/dashboard/departamentos', label: 'Departamentos' },
+  { href: '/dashboard/obras', label: 'Obras' },
+  { href: '/dashboard/centros-de-custo', label: 'Centros de Custo' },
 ];
 
 interface Me {
