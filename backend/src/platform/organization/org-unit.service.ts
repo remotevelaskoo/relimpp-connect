@@ -54,6 +54,12 @@ export class OrgUnitService {
     return this.delegate(model).update({ where: { id }, data });
   }
 
+  async remove(model: OrgUnitModel, id: string) {
+    await this.get(model, id);
+    await this.delegate(model).delete({ where: { id } });
+    return { deleted: true };
+  }
+
   private async ensureCompany(companyId: string) {
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },

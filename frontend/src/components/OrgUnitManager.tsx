@@ -81,6 +81,24 @@ export default function OrgUnitManager({
     setError(null);
   }
 
+  async function onDelete(item: OrgUnit) {
+    if (
+      !window.confirm(
+        `Excluir "${item.name}"? Esta ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    try {
+      await api(`/${resource}/${item.id}`, { method: 'DELETE' });
+      if (editingId === item.id) startCreate();
+      await loadItems(companyId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao excluir');
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!companyId) {
@@ -249,12 +267,20 @@ export default function OrgUnitManager({
                       </span>
                     </td>
                     <td className="py-2 text-right">
-                      <button
-                        onClick={() => startEdit(item)}
-                        className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
-                      >
-                        Editar
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => startEdit(item)}
+                          className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => onDelete(item)}
+                          className="rounded-md border border-red-200 px-3 py-1 text-xs text-red-600 hover:bg-red-50"
+                        >
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

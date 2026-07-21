@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -37,6 +38,11 @@ abstract class BaseOrgUnitController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateOrgUnitDto) {
     return this.service.update(this.model, id, dto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.service.remove(this.model, id);
   }
 }
 

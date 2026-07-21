@@ -51,6 +51,24 @@ export default function EmpresasPage() {
     setError(null);
   }
 
+  async function onDelete(company: Company) {
+    if (
+      !window.confirm(
+        `Excluir a empresa "${company.name}"? Esta ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    try {
+      await api(`/companies/${company.id}`, { method: 'DELETE' });
+      if (editingId === company.id) startCreate();
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao excluir');
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -221,12 +239,20 @@ export default function EmpresasPage() {
                       </span>
                     </td>
                     <td className="py-2 text-right">
-                      <button
-                        onClick={() => startEdit(c)}
-                        className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
-                      >
-                        Editar
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => startEdit(c)}
+                          className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => onDelete(c)}
+                          className="rounded-md border border-red-200 px-3 py-1 text-xs text-red-600 hover:bg-red-50"
+                        >
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

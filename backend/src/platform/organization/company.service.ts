@@ -60,6 +60,26 @@ export class CompanyService {
     }
   }
 
+  async remove(id: string) {
+    await this.get(id);
+    const [branches, departments, projects, costCenters, users] =
+      await Promise.all([
+        this.prisma.branch.count({ where: { companyId: id } }),
+        this.prisma.department.count({ where: { companyId: id } }),
+        this.prisma.project.count({ where: { companyId: id } }),
+        this.prisma.costCenter.count({ where: { companyId: id } }),
+        this.prisma.user.count({ where: { companyId: id } }),
+      ]);
+    const dependents = branches + departments + projects + costCenters + users;
+    if (dependents > 0) {
+      throw new ConflictException(
+        'Não é possível excluir: existem registros vinculados a esta empresa (filiais, departamentos, obras, centros de custo ou usuários). Remova ou inative-os antes.',
+      );
+    }
+    await this.prisma.company.delete({ where: { id } });
+    return { deleted: true };
+  }
+
   private mapKnownErrors(error: unknown): unknown {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

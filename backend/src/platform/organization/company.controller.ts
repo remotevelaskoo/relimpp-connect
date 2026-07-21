@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -46,5 +47,10 @@ export class CompanyController {
     @CurrentUser() user: { id?: string },
   ) {
     return this.companies.update(id, dto, user?.id);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.companies.remove(id);
   }
 }

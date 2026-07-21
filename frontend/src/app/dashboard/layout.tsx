@@ -5,13 +5,30 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, clearToken, getToken } from '@/lib/api';
 
-const MENU = [
-  { href: '/dashboard', label: 'Início' },
-  { href: '/dashboard/empresas', label: 'Empresas' },
-  { href: '/dashboard/filiais', label: 'Filiais' },
-  { href: '/dashboard/departamentos', label: 'Departamentos' },
-  { href: '/dashboard/obras', label: 'Obras' },
-  { href: '/dashboard/centros-de-custo', label: 'Centros de Custo' },
+interface MenuItem {
+  href: string;
+  label: string;
+}
+
+interface MenuGroup {
+  label?: string;
+  items: MenuItem[];
+}
+
+const MENU: MenuGroup[] = [
+  {
+    items: [{ href: '/dashboard', label: 'Início' }],
+  },
+  {
+    label: 'Cadastros',
+    items: [
+      { href: '/dashboard/empresas', label: 'Empresas' },
+      { href: '/dashboard/filiais', label: 'Filiais' },
+      { href: '/dashboard/departamentos', label: 'Departamentos' },
+      { href: '/dashboard/obras', label: 'Obras' },
+      { href: '/dashboard/centros-de-custo', label: 'Centros de Custo' },
+    ],
+  },
 ];
 
 interface Me {
@@ -66,23 +83,32 @@ export default function DashboardLayout({
           <p className="text-lg font-bold text-brand-light">Relimpp Connect</p>
           <p className="text-xs text-slate-400">Plataforma Corporativa</p>
         </div>
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {MENU.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`block rounded-lg px-3 py-2 text-sm ${
-                  active
-                    ? 'bg-brand text-white'
-                    : 'text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 space-y-4 px-3 py-4">
+          {MENU.map((group, idx) => (
+            <div key={group.label ?? `group-${idx}`} className="space-y-1">
+              {group.label && (
+                <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {group.label}
+                </p>
+              )}
+              {group.items.map((item) => {
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`block rounded-lg px-3 py-2 text-sm ${
+                      active
+                        ? 'bg-brand text-white'
+                        : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="border-t border-slate-800 px-6 py-4 text-xs text-slate-400">
           <p className="font-medium text-slate-200">{me?.name}</p>
