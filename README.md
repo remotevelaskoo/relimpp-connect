@@ -38,6 +38,7 @@ Produto em fase de discovery, arquitetura e preparação do MVP técnico.
 - [Product Book](docs/01-product-book/README.md)
 - [Engineering Manual](docs/02-engineering-manual/README.md)
 - [Architecture Decision Records](docs/03-architecture/adr/README.md)
+- [Blueprint de Produto](docs/11-blueprint/README.md)
 - [Roadmap](docs/10-roadmap/roadmap.md)
 
 ## MVP técnico
