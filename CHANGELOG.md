@@ -14,5 +14,7 @@ O formato seguirá os princípios de **Keep a Changelog** e versionamento semân
 - Scaffolding executável do MVP 0 (Fundação): backend NestJS + Prisma (auth JWT, empresas, health) e frontend Next.js (login, "Meu Trabalho", empresas).
 - Edição de empresas e padronização de CNPJ (máscara `xx.xxx.xxx/xxxx-xx`, validação estrutural de 14 dígitos e CNPJ único). Validação de dígitos verificadores fica disponível para reativação futura.
 - CRUD e edição de filiais, departamentos, obras e centros de custo, com componente de UI reutilizável e status ativo/inativo.
+- Exclusão de empresas (com guarda de dependências) e de unidades organizacionais, com confirmação na interface.
+- Menu lateral agrupado em uma seção "Cadastros".
 - Schema Prisma inicial do Core Platform, migração `init` e seed (papéis, permissões, categorias e usuário administrador).
 - `docker-compose.dev.yml` (PostgreSQL) e arquivos `.env.example` de backend e frontend.
