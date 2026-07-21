@@ -12,5 +12,7 @@ O formato seguirá os princípios de **Keep a Changelog** e versionamento semân
 - Templates de Issues e Pull Requests.
 - ADRs iniciais da plataforma.
 - Scaffolding executável do MVP 0 (Fundação): backend NestJS + Prisma (auth JWT, empresas, health) e frontend Next.js (login, "Meu Trabalho", empresas).
+- Edição de empresas e padronização/validação de CNPJ (máscara `xx.xxx.xxx/xxxx-xx`, dígitos verificadores, CNPJ único).
+- CRUD e edição de filiais, departamentos, obras e centros de custo, com componente de UI reutilizável e status ativo/inativo.
 - Schema Prisma inicial do Core Platform, migração `init` e seed (papéis, permissões, categorias e usuário administrador).
 - `docker-compose.dev.yml` (PostgreSQL) e arquivos `.env.example` de backend e frontend.
