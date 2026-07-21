@@ -20,6 +20,12 @@ const MENU: MenuGroup[] = [
     items: [{ href: '/dashboard', label: 'Início' }],
   },
   {
+    label: 'Compras',
+    items: [
+      { href: '/dashboard/compras/solicitacoes', label: 'Solicitações' },
+    ],
+  },
+  {
     label: 'Cadastros',
     items: [
       { href: '/dashboard/empresas', label: 'Empresas' },

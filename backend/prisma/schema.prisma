@@ -22,12 +22,13 @@ model Company {
   cnpj      String?  @unique
   active    Boolean  @default(true)
 
-  branches    Branch[]
-  departments Department[]
-  projects    Project[]
-  costCenters CostCenter[]
-  users       User[]
-  roleScopes  UserRoleScope[]
+  branches         Branch[]
+  departments      Department[]
+  projects         Project[]
+  costCenters      CostCenter[]
+  users            User[]
+  roleScopes       UserRoleScope[]
+  purchaseRequests PurchaseRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -101,7 +102,8 @@ model User {
   passwordHash String
   active       Boolean  @default(true)
 
-  roleScopes UserRoleScope[]
+  roleScopes       UserRoleScope[]
+  purchaseRequests PurchaseRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -163,4 +165,58 @@ model Category {
   createdAt DateTime @default(now())
 
   @@unique([type, key])
+}
+
+// ------------------------------------------------------------------
+// Módulo de Compras — Solicitação de compra (MVP 1)
+// Status: DRAFT, SUBMITTED, RETURNED, APPROVED, REJECTED, CANCELLED
+// ------------------------------------------------------------------
+
+model PurchaseRequest {
+  id            String  @id @default(uuid())
+  seq           Int     @default(autoincrement())
+  companyId     String
+  company       Company @relation(fields: [companyId], references: [id])
+  requesterId   String
+  requester     User    @relation(fields: [requesterId], references: [id])
+  justification String
+  priority      String  @default("medium") // low | medium | high | urgent
+  status        String  @default("DRAFT")
+
+  items  PurchaseRequestItem[]
+  events PurchaseRequestEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+  version   Int      @default(1)
+
+  @@index([companyId])
+  @@index([status])
+}
+
+model PurchaseRequestItem {
+  id            String          @id @default(uuid())
+  requestId     String
+  request       PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  description   String
+  specification String?
+  quantity      Float           @default(1)
+  unit          String          @default("un")
+  estimatedPrice Float?
+
+  @@index([requestId])
+}
+
+model PurchaseRequestEvent {
+  id        String          @id @default(uuid())
+  requestId String
+  request   PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  actorId   String?
+  createdAt DateTime        @default(now())
+
+  @@index([requestId])
 }
