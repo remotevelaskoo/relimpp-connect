@@ -1,0 +1,27 @@
+# Ambiente de desenvolvimento — Relimpp Connect
+# Sobe apenas as dependências de infraestrutura (PostgreSQL).
+# O backend e o frontend rodam localmente em modo dev (ver AGENTS.md).
+#
+# Uso:
+#   docker compose -f infrastructure/docker/docker-compose.dev.yml up -d
+services:
+  db:
+    image: postgres:16
+    container_name: relimpp-connect-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: relimpp
+      POSTGRES_PASSWORD: relimpp
+      POSTGRES_DB: relimpp_connect
+    ports:
+      - "5432:5432"
+    volumes:
+      - relimpp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U relimpp -d relimpp_connect"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  relimpp_pgdata:
