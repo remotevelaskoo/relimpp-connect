@@ -2,20 +2,47 @@
 
 ## Cursor Cloud specific instructions
 
-### Repository state (read this first)
+### Estado do repositório
 
-Relimpp Connect is currently a **documentation-only repository** in the discovery/architecture phase. There is **no application code, no dependencies, no build system, no tests, and no lint configuration** committed yet.
+O Relimpp Connect saiu da fase documentação-only: o MVP 0 (Fundação) já tem código executável.
 
-- `backend/`, `frontend/`, `database/`, and `infrastructure/` contain only placeholder `README.md` files. Per those READMEs (and the root `README.md`), the NestJS backend, Next.js frontend, and PostgreSQL schema are only created **after** the corresponding architecture / design-system ADRs are approved. Do not scaffold these projects unless a task explicitly asks for it.
-- The stack listed in `README.md` (Next.js, NestJS, PostgreSQL, S3-compatible storage, Docker) is **proposed**, not yet implemented.
-- The real "product" today is the documentation set under `docs/` plus the root Markdown files.
+- `backend/` — API NestJS + Prisma + PostgreSQL (Core Platform: auth JWT, organização/empresas, health).
+- `frontend/` — Next.js (App Router) + Tailwind (login, "Meu Trabalho", empresas).
+- `database/` — modelo via Prisma (`backend/prisma/schema.prisma` + `migrations/`).
+- `infrastructure/docker/docker-compose.dev.yml` — PostgreSQL para desenvolvimento.
+- `docs/` — Product Book, ADRs (0001–0006), análise de início de desenvolvimento, etc.
 
-### What "running" / "testing" means today
+As tecnologias e decisões estruturais estão registradas em ADRs (`docs/03-architecture/adr`).
 
-- There is nothing to `npm install`, build, or serve as an application. The update script is intentionally a near no-op and only installs dependencies once real manifests (e.g. `backend/package.json`, `frontend/package.json`) exist.
-- To sanity-check the docs product, you can validate that internal relative Markdown links resolve, and optionally render the Markdown to a browsable HTML preview (e.g. `pip install --user markdown` + `python3 -m http.server`). These renderer tools are one-off and should NOT be added to the update script.
-- Runtimes available on the VM: Node 22 and Python 3.12. Docker is not installed.
+### Serviços e como rodar
 
-### When real code lands
+Comandos padrão estão documentados em `backend/README.md` e `frontend/README.md`. Resumo:
 
-Once `backend/` / `frontend/` gain `package.json` files, update the update script to run the matching package manager (check for the lockfile: `package-lock.json`→npm, `pnpm-lock.yaml`→pnpm, `yarn.lock`→yarn) and document the real lint/test/build/run commands here.
+- Backend: `cd backend && npm run start:dev` → `http://localhost:3001/api/v1` (Swagger em `/api/v1/docs`).
+- Frontend: `cd frontend && npm run dev` → `http://localhost:3000`.
+- Admin do seed: `admin@relimpp.local` / `Admin@123`.
+
+### Dependência de PostgreSQL (gotchas importantes)
+
+- O backend exige PostgreSQL acessível via `DATABASE_URL` (padrão: `relimpp:relimpp@localhost:5432/relimpp_connect`). O `docker-compose.dev.yml` é a forma canônica em máquinas com Docker.
+- **Na VM do Cursor Cloud não há Docker.** Instale o PostgreSQL via apt e suba o cluster (ação pontual, fora do update script):
+  - `sudo apt-get update && sudo apt-get install -y postgresql`
+  - `sudo pg_ctlcluster 16 main start`
+  - criar role/DB: role `relimpp` (senha `relimpp`) com `CREATEDB`, e database `relimpp_connect`.
+- **`prisma migrate dev` precisa de um shadow database**: o role do banco precisa de permissão `CREATEDB` (`ALTER ROLE relimpp CREATEDB;`). Sem isso, falha com `P3014`. `prisma migrate deploy` não usa shadow DB.
+- Os arquivos `.env` (backend) e `.env.local` (frontend) não são versionados; copie de `.env.example`.
+
+### Fluxo de dados / migrações
+
+- Após alterar `schema.prisma`, gere migração com `npm run prisma:migrate` e rode `npm run seed` se necessário.
+- `npm install` no backend roda `prisma generate` (postinstall); reinstalar dependências regenera o client automaticamente.
+
+### Lint / testes / build
+
+- Backend: `npm run lint`, `npm test`, `npm run build`.
+- Frontend: `npm run lint`, `npm run build`.
+
+### Update script
+
+O update script instala dependências de `backend/` e `frontend/` (npm) apenas quando os respectivos
+`package.json` existem. Ele NÃO sobe serviços nem o PostgreSQL — inicie-os conforme acima.

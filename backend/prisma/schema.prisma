@@ -1,0 +1,222 @@
+// Relimpp Connect — schema inicial do Core Platform (MVP 0).
+// Referências: docs/01-product-book/analise-inicio-desenvolvimento.md (seções 8 e 10)
+// e ADR-0005 (estratégia multiempresa).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------
+// Estrutura organizacional (tenant = Company)
+// ------------------------------------------------------------------
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  tradeName String?
+  cnpj      String?  @unique
+  active    Boolean  @default(true)
+
+  branches         Branch[]
+  departments      Department[]
+  projects         Project[]
+  costCenters      CostCenter[]
+  users            User[]
+  roleScopes       UserRoleScope[]
+  purchaseRequests PurchaseRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+  version   Int      @default(1)
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  code      String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  code      String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model Project {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  code      String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model CostCenter {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  code      String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+// ------------------------------------------------------------------
+// Usuários, papéis, permissões e escopo (RBAC — ADR-0006)
+// ------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(uuid())
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id])
+  name         String
+  email        String   @unique
+  passwordHash String
+  active       Boolean  @default(true)
+
+  roleScopes       UserRoleScope[]
+  purchaseRequests PurchaseRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  version   Int      @default(1)
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  key         String           @unique
+  name        String
+  description String?
+  permissions RolePermission[]
+  roleScopes  UserRoleScope[]
+  createdAt   DateTime         @default(now())
+}
+
+model Permission {
+  id        String           @id @default(uuid())
+  key       String           @unique // ex.: "company:create"
+  resource  String
+  action    String
+  roles     RolePermission[]
+  createdAt DateTime         @default(now())
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+// Vínculo papel + escopo organizacional de um usuário.
+model UserRoleScope {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  companyId String?
+  user      User     @relation(fields: [userId], references: [id])
+  role      Role     @relation(fields: [roleId], references: [id])
+  company   Company? @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ------------------------------------------------------------------
+// Categorias configuráveis (base para módulos)
+// ------------------------------------------------------------------
+
+model Category {
+  id        String   @id @default(uuid())
+  type      String // ex.: "purchase", "supplier", "document"
+  key       String
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([type, key])
+}
+
+// ------------------------------------------------------------------
+// Módulo de Compras — Solicitação de compra (MVP 1)
+// Status: DRAFT, SUBMITTED, RETURNED, APPROVED, REJECTED, CANCELLED
+// ------------------------------------------------------------------
+
+model PurchaseRequest {
+  id            String  @id @default(uuid())
+  seq           Int     @default(autoincrement())
+  companyId     String
+  company       Company @relation(fields: [companyId], references: [id])
+  requesterId   String
+  requester     User    @relation(fields: [requesterId], references: [id])
+  justification String
+  priority      String  @default("medium") // low | medium | high | urgent
+  status        String  @default("DRAFT")
+
+  items  PurchaseRequestItem[]
+  events PurchaseRequestEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+  updatedBy String?
+  version   Int      @default(1)
+
+  @@index([companyId])
+  @@index([status])
+}
+
+model PurchaseRequestItem {
+  id            String          @id @default(uuid())
+  requestId     String
+  request       PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  description   String
+  specification String?
+  quantity      Float           @default(1)
+  unit          String          @default("un")
+  estimatedPrice Float?
+
+  @@index([requestId])
+}
+
+model PurchaseRequestEvent {
+  id        String          @id @default(uuid())
+  requestId String
+  request   PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  actorId   String?
+  createdAt DateTime        @default(now())
+
+  @@index([requestId])
+}
