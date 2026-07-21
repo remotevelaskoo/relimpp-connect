@@ -4,17 +4,17 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
-import { isValidCnpj } from './cnpj.util';
+import { hasValidCnpjStructure } from './cnpj.util';
 
 @ValidatorConstraint({ name: 'isCnpj', async: false })
 export class IsCnpjConstraint implements ValidatorConstraintInterface {
   validate(value: unknown): boolean {
     if (value === undefined || value === null || value === '') return true;
-    return typeof value === 'string' && isValidCnpj(value);
+    return typeof value === 'string' && hasValidCnpjStructure(value);
   }
 
   defaultMessage(): string {
-    return 'CNPJ inválido. Use o formato xx.xxx.xxx/xxxx-xx.';
+    return 'CNPJ deve conter 14 dígitos no formato xx.xxx.xxx/xxxx-xx.';
   }
 }
 

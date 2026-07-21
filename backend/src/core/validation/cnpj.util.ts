@@ -4,6 +4,15 @@ export function normalizeCnpj(value: string): string {
   return (value ?? '').replace(/\D/g, '');
 }
 
+// Validação estrutural: 14 dígitos e não uma sequência repetida.
+// Usada por padrão nesta fase do produto (aceita CNPJs de exemplo/teste).
+export function hasValidCnpjStructure(value: string): boolean {
+  const digits = normalizeCnpj(value);
+  if (digits.length !== 14) return false;
+  if (/^(\d)\1{13}$/.test(digits)) return false;
+  return true;
+}
+
 export function isValidCnpj(value: string): boolean {
   const digits = normalizeCnpj(value);
   if (digits.length !== 14) return false;
