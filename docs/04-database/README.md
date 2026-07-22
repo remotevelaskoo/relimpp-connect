@@ -62,11 +62,11 @@ Category  (tabela solta, sem FK — classificação genérica por "type")
 
 | Tabela | Campos próprios | Relacionamentos | Observações |
 |---|---|---|---|
-| **User** | `name`, `email` (único, global — não por empresa), `passwordHash`, `active` | N—1 Company (opcional), 1—N UserRoleScope, 1—N PurchaseRequest | `companyId` é **opcional** no schema — hoje o admin seed não tem empresa vinculada. |
-| **Role** | `key` (único, ex. `platform_admin`), `name`, `description?` | 1—N RolePermission, 1—N UserRoleScope | Papéis do MVP: `platform_admin`, `director`, `area_manager`, `requester`, `buyer`, `receiving`, `fiscal`, `auditor` (seed) — falta `fornecedor` como Role explícita (Portal do Fornecedor ainda não modelado). |
-| **Permission** | `key` (único, formato `resource:action`, ex. `company:create`), `resource`, `action` | N—N com Role via RolePermission | Só 5 permissões seedadas hoje (`company:view/create/edit`, `user:view/create`) — cobre uma fração pequena das ações do V07 (Blueprint). |
-| **RolePermission** | — | PK composta `(roleId, permissionId)` | Tabela de junção pura. |
-| **UserRoleScope** | — | N—1 User, N—1 Role, N—1 Company (opcional) | Implementa o modelo "papel + escopo" do V07: um usuário pode ter várias linhas aqui, uma por combinação papel×empresa. **Ainda não tem** escopo por filial/departamento/obra/centro de custo — só por empresa. |
+| **User** | `name`, `email` (único, global — não por empresa), `passwordHash`, `active` | N—1 Company (opcional), 1—N UserRoleScope, 1—N PurchaseRequest | `companyId` é **opcional** no schema — hoje o admin seed não tem empresa vinculada. CRUD completo em `/users` (ver [API Book §5.1](../05-api/README.md#5-usuários-papéis-e-permissões-users-roles-permissions)); sem exclusão física, só `active`. |
+| **Role** | `key` (único, ex. `platform_admin`), `name`, `description?` | 1—N RolePermission, 1—N UserRoleScope | Papéis do MVP: `platform_admin`, `director`, `area_manager`, `requester`, `buyer`, `receiving`, `fiscal`, `auditor` (seed), mais quaisquer papéis criados via `/roles` — falta `fornecedor` como Role explícita (Portal do Fornecedor ainda não modelado). |
+| **Permission** | `key` (único, formato `resource:action`, ex. `company:create`), `resource`, `action` | N—N com Role via RolePermission | Só 5 permissões seedadas hoje (`company:view/create/edit`, `user:view/create`) — cobre uma fração pequena das ações do V07 (Blueprint). `GET /permissions` lista; **não há endpoint para criar novas** ainda (só via seed). |
+| **RolePermission** | — | PK composta `(roleId, permissionId)` | Tabela de junção pura. Gerenciada via `PATCH /roles/:id/permissions` (substitui o conjunto inteiro). |
+| **UserRoleScope** | — | N—1 User, N—1 Role, N—1 Company (opcional) | Implementa o modelo "papel + escopo" do V07: um usuário pode ter várias linhas aqui, uma por combinação papel×empresa (via `POST/DELETE /users/:id/role-scopes`). **Ainda não tem** escopo por filial/departamento/obra/centro de custo — só por empresa. Sem `@@unique`, então o mesmo papel+escopo pode ser atribuído duas vezes por engano. |
 
 ### 3.3 Categorias
 
@@ -155,9 +155,12 @@ Registradas aqui para não serem perdidas — tratar como backlog de modelagem, 
 3. **RLS não implementada.** ADR-0005 propõe Row-Level Security como camada adicional; hoje o isolamento é
    só por filtro de aplicação (`where: { companyId }` nos services). Risco: um service que esqueça o
    filtro vaza dados entre empresas.
-4. **RBAC minimalista.** Só 5 permissões seedadas; o modelo de ações do V07 (visualizar, criar, editar,
-   cancelar, aprovar, rejeitar, reabrir, exportar, administrar — por recurso) ainda não está totalmente
-   representado em `Permission`.
+4. **RBAC gerenciável, mas não aplicado.** `/users`, `/roles` e `/permissions` já permitem criar usuários,
+   papéis e atribuir permissões (Tela 085/086 do V10) — mas nenhum guard do NestJS **checa** `Permission`
+   antes de executar uma ação. Hoje qualquer usuário autenticado pode aprovar solicitação, homologar
+   fornecedor ou administrar papéis, independente do que `RolePermission` diga. Só 5 permissões seedadas;
+   o modelo de ações do V07 (visualizar, criar, editar, cancelar, aprovar, rejeitar, reabrir, exportar,
+   administrar — por recurso) ainda não está totalmente representado em `Permission`.
 5. **Sem tabela de Produto/Catálogo, Cotação, Pedido, Recebimento ou Documento fiscal.** `Supplier` já
    existe (seção 3.5), mas o schema ainda cobre só Fundação + Solicitação de Compra + Cadastro/Homologação
    de Fornecedor (Fase 1–2 do roadmap, [V01 §4](../11-blueprint/v01-visao-modulos-escopo.md#4-escopo-por-fase-alinhado-ao-roadmap)).

@@ -1,6 +1,6 @@
 # API Book
 
-- Documento: API do Relimpp Connect (Core Platform + Compras + Fornecedores)
+- Documento: API do Relimpp Connect (Core Platform + Compras + Fornecedores + Usuários/Papéis)
 - Fonte da verdade: controllers em [`backend/src`](../../backend/src) + Swagger gerado em runtime
   (`GET /api/v1/docs`, a partir de `backend/src/main.ts`)
 - Status: 🔄 reflete o **MVP 0/1**. Cresce junto com o código — módulos futuros (Cotação, Pedido,
@@ -26,7 +26,7 @@
 - **Paginação:** **não implementada.** Todo `list()` retorna a coleção inteira (`findMany` sem `skip`/`take`).
   Ok para o volume de dados do MVP; será necessário antes de qualquer tabela crescer muito.
 - **Auditoria de API:** não há middleware de log de requisição/auditoria ainda — os únicos registros de
-  auditoria hoje são os eventos de `PurchaseRequestEvent` (seção 5) e `SupplierEvent` (seção 4), e os
+  auditoria hoje são os eventos de `PurchaseRequestEvent` (seção 6) e `SupplierEvent` (seção 4), e os
   campos `createdBy`/`updatedBy` nas entidades que os têm.
 
 ## 2. Auth (`/auth`)
@@ -91,9 +91,42 @@ Mesmo padrão de `ensureStatus()`/`transition()` do módulo de Compras — ver a
 fornecimento, dados bancários, documentos com validade/vencimento, avaliação de desempenho, cálculo de
 risco, e qualquer checagem de papel/permissão nas ações de homologação (hoje qualquer usuário autenticado
 pode aprovar/bloquear um fornecedor). Este `/suppliers` é o cadastro interno — **não** é o Portal do
-Fornecedor (autenticação externa do próprio fornecedor), que continua sem nenhuma rota (ver seção 7).
+Fornecedor (autenticação externa do próprio fornecedor), que continua sem nenhuma rota (ver seção 8).
 
-## 5. Compras — Solicitação (`/purchase-requests`)
+## 5. Usuários, Papéis e Permissões (Users, Roles, Permissions)
+
+### 5.1 Usuários (`/users`)
+
+| Método | Rota | Corpo | Regras |
+|---|---|---|---|
+| `GET` | `/users?companyId=` | — | Inclui `roleScopes[]` (papel + empresa de cada vínculo); **nunca** inclui `passwordHash`. |
+| `GET` | `/users/:id` | — | Idem. `404` se não existir. |
+| `POST` | `/users` | `{ name, email, password (mín. 8), companyId? }` | Senha com `bcrypt` (10 rounds); `409` se `email` duplicado (único globalmente, não por empresa). |
+| `PATCH` | `/users/:id` | `{ name?, email?, companyId?, active? }` | **Não** aceita `password` neste endpoint (bloqueado no DTO) — usar `/set-password`. |
+| `POST` | `/users/:id/set-password` | `{ password (mín. 8) }` | Rehash e substitui; não invalida tokens já emitidos (sem blacklist de JWT). |
+| `POST` | `/users/:id/role-scopes` | `{ roleId, companyId? }` | Cria um vínculo `UserRoleScope`. `companyId` omitido = papel global (todas as empresas). Não impede duplicar o mesmo papel+escopo duas vezes (sem `@@unique` no schema). |
+| `DELETE` | `/users/:id/role-scopes/:roleScopeId` | — | Remove um vínculo específico; `404` se o `roleScopeId` não pertencer a este usuário. |
+
+**Sem endpoint de exclusão de usuário** (proposital — Apêndice B da Especificação: "nenhum registro crítico
+deve ser excluído fisicamente"). Para desativar, use `PATCH { active: false }`.
+
+### 5.2 Papéis (`/roles`) e Permissões (`/permissions`)
+
+| Método | Rota | Corpo | Regras |
+|---|---|---|---|
+| `GET` | `/roles` | — | Inclui `permissions[]` (join com `Permission`). |
+| `GET` | `/roles/:id` | — | Idem. |
+| `POST` | `/roles` | `{ key (snake_case), name, description? }` | `409` se `key` duplicada. |
+| `PATCH` | `/roles/:id` | `{ name?, description? }` | `key` é imutável após criado. |
+| `PATCH` | `/roles/:id/permissions` | `{ permissionIds: string[] }` | **Substitui o conjunto inteiro** (delete-all + insert, numa transação) — não é incremental. `404` se algum id não existir. |
+| `GET` | `/permissions` | — | Lista fixa, hoje só as 5 permissões seedadas (`company:view/create/edit`, `user:view/create`). Sem `POST` — criar novas permissões ainda exige alterar o seed. |
+
+**O que a Especificação/Blueprint pedem e ainda não existe:** nenhuma dessas permissões é **checada** em
+lugar nenhum da API ainda — `/roles` e `/permissions` só armazenam o modelo de dados. Ver
+[Database Book §3.2](../04-database/README.md#32-usuários-papéis-e-permissões-rbac--adr-0006) para o
+inventário completo do gap de RBAC (escopo por filial/obra/CC, segregação de funções, alçadas).
+
+## 6. Compras — Solicitação (`/purchase-requests`)
 
 | Método | Rota | Corpo | Regras |
 |---|---|---|---|
@@ -116,19 +149,18 @@ aprovação paralela ou por maioria, delegação de aprovador, anexos, vínculo 
 centro de custo, e distinção formal solicitante×aprovador por permissão (hoje qualquer usuário autenticado
 pode chamar `/approve` — não há checagem de papel ainda).
 
-## 6. Health (`/health`)
+## 7. Health (`/health`)
 
 | Método | Rota | Auth | Retorno |
 |---|---|---|---|
 | `GET` | `/health` | Pública | `{ status: "ok"\|"degraded", database: "up"\|"down", timestamp }` — testa o banco com `SELECT 1`. |
 
-## 7. Endpoints previstos e ainda inexistentes
+## 8. Endpoints previstos e ainda inexistentes
 
 Para não perder o mapeamento entre o que o Blueprint promete e o que a API já cobre:
 
 | Área do Blueprint | Rota esperada (a definir) | Status |
 |---|---|---|
-| Usuários/Perfis (V07, admin/cadastros/usuarios) | `/users`, `/roles`, `/permissions` (CRUD) | ⬜ só leitura interna via seed; sem controller HTTP para gerenciar. |
 | Cotação/Comparação (V03 §3.3) | `/quotations`, `/quotations/:id/invite` | ⬜ nada implementado. |
 | Portal do Fornecedor (V08) | `/portal/*` (namespace separado, auth de fornecedor) | ⬜ nada implementado. O cadastro **interno** de fornecedor já existe (seção 4), mas o Portal (login e ações do próprio fornecedor) é auth/UI separado e continua sem nenhuma rota. |
 | Pedido de Compra (V03 §3.4) | `/purchase-orders` | ⬜ nada implementado. |

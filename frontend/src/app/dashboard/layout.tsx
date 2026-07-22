@@ -48,6 +48,8 @@ const MENU: MenuGroup[] = [
       { icon: '💲', href: '/dashboard/admin/cadastros/centros-de-custo', label: 'Centros de Custo' },
       { icon: '👷', href: '/dashboard/admin/cadastros/obras', label: 'Obras' },
       { icon: '🚛', href: '/dashboard/admin/cadastros/fornecedores', label: 'Fornecedores' },
+      { icon: '👥', href: '/dashboard/admin/cadastros/usuarios', label: 'Usuários' },
+      { icon: '🛡️', href: '/dashboard/admin/cadastros/perfis', label: 'Perfis' },
     ],
   },
 ];

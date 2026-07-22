@@ -118,8 +118,8 @@ Tela NNN — <Nome>
 | 082 | Departamentos | ✅ (implementado) |
 | 083 | Centros de Custo | ✅ (implementado) |
 | 084 | Obras | ✅ (implementado) |
-| 085 | Usuários | ⬜ |
-| 086 | Perfis | ⬜ |
+| 085 | Usuários | ✅ |
+| 086 | Perfis | ✅ |
 | 087 | Clientes | ⬜ |
 | 088 | Categorias / Marcas / Unidades | ⬜ |
 | 089 | Transportadoras / Moedas / Impostos / Tipos de Documento | ⬜ |
@@ -290,6 +290,47 @@ Aprovação, Recebimentos, Assinaturas, Favoritos, Recentes. Ações rápidas in
 - **Dados/API:** `GET/PATCH/DELETE /suppliers/:id`, `POST /suppliers/:id/{submit-for-review,approve,
   suspend,block,reactivate,inactivate}` — ver [API Book §4](../05-api/README.md#4-fornecedores-suppliers).
 - **Status:** ✅ implementado no MVP (homologação básica; visão 360º completa é trabalho futuro).
+
+### Tela 085 — Usuários (lista + cadastro)
+- **Módulo:** Cadastros · **Rota:** `/dashboard/admin/cadastros/usuarios`
+- **Objetivo:** listar usuários, criar conta de acesso e ver os papéis atribuídos a cada um.
+- **Perfis/permissões:** qualquer usuário autenticado (RBAC granular ainda não aplicado — mesma pendência
+  registrada na Tela 067).
+- **Layout:** formulário de criação (nome, e-mail, senha, empresa opcional) + tabela com nome, e-mail,
+  papéis atribuídos (resumo "Papel · Empresa") e status.
+- **Ações:** criar; abrir (→ Tela 086 não, → detalhe do próprio usuário, ver abaixo).
+- **Dados/API:** `GET/POST /users` — ver [API Book §5](../05-api/README.md#5-usuários-papéis-e-permissões-users-roles-permissions).
+- **Status:** ✅ implementado no MVP.
+
+### Tela 085b — Usuário (detalhe)
+- **Rota:** `/dashboard/admin/cadastros/usuarios/:id`
+- **Layout:** dados (nome/e-mail/empresa/ativo), redefinir senha, e gestão de "Papéis atribuídos" — lista
+  de vínculos papel+escopo com botão remover, e formulário para atribuir um novo (papel + empresa opcional;
+  sem empresa = papel global, válido em todas as empresas).
+- **Ações:** salvar dados, redefinir senha, atribuir papel, remover papel.
+- **Regras:** um usuário pode ter várias linhas de papel (uma por combinação papel×empresa), implementando
+  o modelo "papel + escopo" do V07.
+- **Dados/API:** `PATCH /users/:id`, `POST /users/:id/set-password`, `POST/DELETE /users/:id/role-scopes[/:id]`.
+- **Status:** ✅ implementado no MVP.
+
+### Tela 086 — Perfis (lista + cadastro)
+- **Módulo:** Cadastros · **Rota:** `/dashboard/admin/cadastros/perfis`
+- **Objetivo:** listar papéis (perfis) existentes e criar novos.
+- **Layout:** formulário de criação (key snake_case, nome, descrição) + tabela com nome, key e contagem de
+  permissões.
+- **Dados/API:** `GET/POST /roles` — ver [API Book §5](../05-api/README.md#5-usuários-papéis-e-permissões-users-roles-permissions).
+- **Status:** ✅ implementado no MVP.
+
+### Tela 086b — Perfil (detalhe)
+- **Rota:** `/dashboard/admin/cadastros/perfis/:id`
+- **Layout:** dados (nome/descrição) + checklist de permissões agrupado por recurso (ex. `company`,
+  `user`), com um botão "Salvar permissões" que substitui o conjunto completo de uma vez.
+- **Regras:** `PATCH /roles/:id/permissions` recebe a lista completa de `permissionIds` e substitui tudo —
+  não há endpoint de adicionar/remover uma permissão isolada.
+- **Pendências:** não há tela para criar novas `Permission` (ações/recursos) — hoje são só as 5 seedadas;
+  criar permissão exigiria uma tela própria ou expandir o seed conforme novos módulos chegam.
+- **Dados/API:** `GET /permissions`, `PATCH /roles/:id`, `PATCH /roles/:id/permissions`.
+- **Status:** ✅ implementado no MVP.
 
 ### Tela 070 — Produto (detalhe)
 - **Módulo:** Catálogo · **Rota:** `/admin/cadastros/produtos/:id`
