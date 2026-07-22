@@ -69,6 +69,11 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [me, setMe] = useState<Me | null>(null);
   const [ready, setReady] = useState(false);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  function toggleGroup(label: string) {
+    setCollapsed((prev) => ({ ...prev, [label]: !prev[label] }));
+  }
 
   useEffect(() => {
     if (!getToken()) {
@@ -107,14 +112,33 @@ export default function DashboardLayout({
           <p className="text-xs text-slate-400">Plataforma Corporativa</p>
         </div>
         <nav className="flex-1 space-y-4 overflow-auto px-3 py-4">
-          {MENU.map((group, idx) => (
+          {MENU.map((group, idx) => {
+            const isCollapsed = !!group.label && !!collapsed[group.label];
+            return (
             <div key={group.label ?? `group-${idx}`} className="space-y-1">
               {group.label && (
-                <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {group.label}
-                </p>
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.label!)}
+                  className="flex w-full items-center justify-between rounded px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-300"
+                >
+                  <span>{group.label}</span>
+                  <svg
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className={`h-3 w-3 flex-shrink-0 transition-transform ${
+                      isCollapsed ? '-rotate-90' : ''
+                    }`}
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
               )}
-              {group.items.map((item) => {
+              {!isCollapsed && group.items.map((item) => {
                 if (item.soon || !item.href) {
                   return (
                     <div
@@ -149,7 +173,8 @@ export default function DashboardLayout({
                 );
               })}
             </div>
-          ))}
+            );
+          })}
         </nav>
         <div className="border-t border-slate-800 px-6 py-4 text-xs text-slate-400">
           <p className="font-medium text-slate-200">{me?.name}</p>
