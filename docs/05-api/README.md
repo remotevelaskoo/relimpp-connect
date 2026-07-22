@@ -183,10 +183,23 @@ Toda transição roda em uma função `transition()` única que: atualiza `statu
 `updatedBy` e cria um `PurchaseRequestEvent`. Ver a máquina de estados completa e o gap sobre workflow
 configurável no [Database Book §3.4](../04-database/README.md#34-módulo-de-compras--solicitação-mvp-1).
 
-**O que a Especificação/Blueprint pedem e ainda não existe nesta rota:** aprovação por alçada/valor,
-aprovação paralela ou por maioria, delegação de aprovador e anexos. Vínculo organizacional (filial/
-departamento/obra/centro de custo) e classificação (tipo/categoria, criticidade, confidencialidade) **já
-existem** (seção 8.1 da Especificação) — ver [Database Book §3.4](../04-database/README.md#34-módulo-de-compras--solicitação-mvp-1).
+### 6.1 Anexos (`/purchase-requests/:id/attachments`)
+
+| Método | Rota | Corpo | Regras |
+|---|---|---|---|
+| `POST` | `/purchase-requests/:id/attachments` | `multipart/form-data`, campo `file` | Sem checagem de permissão nem de status (pode anexar em qualquer estado, inclusive `CANCELLED`). Limite de 15MB por arquivo (`413`-like erro do Multer se exceder); sem restrição de tipo/extensão. Gera evento `ATTACHMENT_ADDED`. |
+| `GET` | `/purchase-requests/:id/attachments/:attachmentId/download` | — | Faz `res.download()` do arquivo; exige o mesmo Bearer token de qualquer rota (não é um link público). `404` se o anexo não existir ou não pertencer a esta solicitação. |
+| `DELETE` | `/purchase-requests/:id/attachments/:attachmentId` | — | Remove o registro e o arquivo físico (best-effort — se o arquivo já não existir em disco, não falha). Gera evento `ATTACHMENT_REMOVED`. |
+
+**Armazenamento:** disco local em `backend/uploads/purchase-requests/<requestId>/<uuid>.<ext>` (gitignored,
+ver [Database Book §3.4](../04-database/README.md#34-módulo-de-compras--solicitação-mvp-1)). O nome
+original do arquivo fica só no banco (`fileName`); o nome em disco é sempre um UUID gerado no upload — não
+há como um nome de arquivo malicioso alterar o caminho de gravação (sem path traversal).
+
+**O que a Especificação/Blueprint pedem e ainda não existe:** aprovação por alçada/valor, aprovação
+paralela ou por maioria, delegação de aprovador. Vínculo organizacional (filial/departamento/obra/centro de
+custo), classificação (tipo/categoria, criticidade, confidencialidade) e anexos **já existem** (seção 8.1
+da Especificação).
 
 ## 7. Health (`/health`)
 

@@ -256,8 +256,9 @@ model PurchaseRequest {
   criticality String? // low | medium | high
   confidential Boolean @default(false)
 
-  items  PurchaseRequestItem[]
-  events PurchaseRequestEvent[]
+  items       PurchaseRequestItem[]
+  events      PurchaseRequestEvent[]
+  attachments PurchaseRequestAttachment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -294,6 +295,23 @@ model PurchaseRequestEvent {
   message   String
   actorId   String?
   createdAt DateTime        @default(now())
+
+  @@index([requestId])
+}
+
+// Anexos (Especificação, seção 8.1 "Anexos"). Armazenamento em disco local por enquanto
+// (ver infrastructure/local-db-windows para o mesmo espírito de "real, mas sem infra paga" —
+// trocar por S3/blob storage é o passo natural antes de produção).
+model PurchaseRequestAttachment {
+  id          String          @id @default(uuid())
+  requestId   String
+  request     PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fileName    String
+  mimeType    String
+  size        Int
+  storagePath String // caminho relativo dentro de backend/uploads/
+  uploadedBy  String?
+  createdAt   DateTime        @default(now())
 
   @@index([requestId])
 }

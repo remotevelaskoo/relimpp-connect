@@ -213,7 +213,7 @@ Aprovação, Recebimentos, Assinaturas, Favoritos, Recentes. Ações rápidas in
   empresa), **tipo/categoria** (`/categories?type=purchase`), justificativa, prioridade, **criticidade**,
   **confidencial** (checkbox), **itens** (descrição, especificação, quantidade, unidade, preço estimado,
   **data necessária**, **local de entrega** — estes dois últimos por item, não por solicitação). **Anexos**
-  ainda não existem (sem sistema de upload/armazenamento no projeto).
+  são enviados na Tela 032 (detalhe), depois de criar o rascunho — não no formulário de criação.
 - **Ações:** adicionar/remover item; salvar rascunho; salvar e enviar.
 - **Validações:** campos obrigatórios; ao menos 1 item; filial/departamento/obra/centro de custo, quando
   informados, precisam pertencer à empresa selecionada (`400` da API se não pertencerem).
@@ -222,25 +222,33 @@ Aprovação, Recebimentos, Assinaturas, Favoritos, Recentes. Ações rápidas in
 - **Dados/API:** `POST /purchase-requests`, `GET /categories?type=purchase`, `GET /branches|departments|projects|cost-centers?companyId=`.
 - **Regras:** rascunho editável; itens do catálogo autopreenchem descrição/unidade/especificação
   (futuro); duplicação de solicitações preservando rastreabilidade.
-- **Status:** ✅ implementado no MVP — cobre todos os campos da seção 8.1 exceto anexos.
+- **Status:** ✅ implementado no MVP — cobre todos os campos da seção 8.1.
 
 ### Tela 032 — Solicitação (detalhe)
 - **Módulo:** Compras · **Rota:** `/compras/solicitacoes/:id`
 - **Objetivo:** visualizar e conduzir a solicitação pelo workflow.
-- **Layout (abas):** Dados · Itens · Anexos · Workflow · Timeline · Comentários · Histórico.
+- **Layout implementado:** seções empilhadas numa única página (não abas): cabeçalho (número, badges de
+  status/confidencial, classificação, vínculo organizacional) → ações → Justificativa → Itens (tabela,
+  com data necessária/local de entrega) → **Anexos** → Timeline. A visão original em abas (Dados · Itens ·
+  Anexos · Workflow · Timeline · Comentários · Histórico) não foi implementada como tal; "Workflow",
+  "Comentários" e "Histórico" (versão) nem existem como seções ainda — só Timeline.
+- **Anexos:** upload (`multipart/form-data`, campo `file`, até 15MB), lista com nome/tamanho, baixar e
+  remover. Sem restrição de status (pode anexar mesmo em `CANCELLED`) nem de tipo de arquivo. Ver
+  [API Book §6.1](../05-api/README.md#61-anexos-purchase-requestsidattachments).
 - **Ações por status:** enviar, aprovar, devolver (+justificativa), rejeitar (+justificativa), cancelar
   (+motivo), editar (rascunho/devolvida).
 - **Estados/Status:** Rascunho, Em aprovação, Devolvida, Aprovada, Rejeitada, Cancelada (Apêndice A).
-- **Eventos:** `PurchaseRequestSubmitted`, `ApprovalCompleted`, etc.
-- **Navegação:** ⇄ Workflow ⇄ Timeline; → Cotação (quando aprovada).
-- **Dados/API:** `GET /purchase-requests/:id`, `POST .../submit|approve|reject|return|cancel`.
+- **Eventos:** `PurchaseRequestSubmitted`, `ApprovalCompleted`, `ATTACHMENT_ADDED`, `ATTACHMENT_REMOVED`, etc.
+- **Navegação:** ⇄ Timeline; → Cotação (quando aprovada, módulo futuro).
+- **Dados/API:** `GET /purchase-requests/:id`, `POST .../submit|approve|reject|return|cancel`,
+  `POST/DELETE .../attachments[/:attachmentId]`, `GET .../attachments/:attachmentId/download`.
 - **Regras:** rejeição/devolução/cancelamento exigem justificativa; resumo de impacto financeiro. Cada ação
-  agora exige permissão do papel do usuário (ver [API Book §5.3](../05-api/README.md#53-como-o-rbac-é-aplicado-permissionsguard)) —
-  **pendência de UX:** o frontend ainda mostra os botões pra qualquer usuário e só descobre que falta
+  de status agora exige permissão do papel do usuário (ver [API Book §5.3](../05-api/README.md#53-como-o-rbac-é-aplicado-permissionsguard))
+  — **pendência de UX:** o frontend ainda mostra os botões pra qualquer usuário e só descobre que falta
   permissão quando a API responde `403` (mensagem exibida no card de erro da tela); ainda não esconde
-  ações que o usuário não pode executar.
-- **Auditoria:** cada transição gera evento na timeline.
-- **Status:** ✅ implementado no MVP (fluxo sequencial).
+  ações que o usuário não pode executar. Anexos não têm checagem de permissão nenhuma.
+- **Auditoria:** cada transição e cada anexo adicionado/removido gera evento na timeline.
+- **Status:** ✅ implementado no MVP (fluxo sequencial + anexos).
 
 ### Tela 063 — Portal — Responder Proposta
 - **Módulo:** Portal do Fornecedor · **Rota:** `/portal/cotacoes/:id/responder`

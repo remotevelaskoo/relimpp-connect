@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { api } from '@/lib/api';
+import { api, downloadFile } from '@/lib/api';
 import { PRIORITY_LABEL, statusMeta } from '@/lib/purchaseStatus';
 
 interface Item {
@@ -29,6 +29,14 @@ interface NamedRef {
   name: string;
 }
 
+interface Attachment {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
 interface RequestDetail {
   id: string;
   number: string;
@@ -47,6 +55,13 @@ interface RequestDetail {
   category: NamedRef | null;
   items: Item[];
   events: Event[];
+  attachments: Attachment[];
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 const CRITICALITY_LABEL: Record<string, string> = {
@@ -61,6 +76,8 @@ export default function SolicitacaoDetailPage() {
   const [req, setReq] = useState<RequestDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -88,6 +105,55 @@ export default function SolicitacaoDetailPage() {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro na ação');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onUploadAttachment() {
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await api(`/purchase-requests/${id}/attachments`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao enviar anexo');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function onDownloadAttachment(attachment: Attachment) {
+    setError(null);
+    try {
+      await downloadFile(
+        `/purchase-requests/${id}/attachments/${attachment.id}/download`,
+        attachment.fileName,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao baixar anexo');
+    }
+  }
+
+  async function onRemoveAttachment(attachment: Attachment) {
+    if (!window.confirm(`Remover o anexo "${attachment.fileName}"?`)) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await api(`/purchase-requests/${id}/attachments/${attachment.id}`, {
+        method: 'DELETE',
+      });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao remover anexo');
     } finally {
       setBusy(false);
     }
@@ -281,6 +347,61 @@ export default function SolicitacaoDetailPage() {
             currency: 'BRL',
           })}
         </p>
+      </section>
+
+      <section className="mt-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-3 font-semibold text-slate-700">
+          Anexos ({req.attachments.length})
+        </h2>
+        {req.attachments.length === 0 ? (
+          <p className="text-sm text-slate-400">Nenhum anexo ainda.</p>
+        ) : (
+          <ul className="mb-4 space-y-2">
+            {req.attachments.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              >
+                <span className="truncate text-slate-700">
+                  {a.fileName}
+                  <span className="ml-2 text-xs text-slate-400">
+                    {formatFileSize(a.size)}
+                  </span>
+                </span>
+                <div className="flex flex-shrink-0 gap-3">
+                  <button
+                    onClick={() => onDownloadAttachment(a)}
+                    className="text-xs text-brand hover:underline"
+                  >
+                    Baixar
+                  </button>
+                  <button
+                    onClick={() => onRemoveAttachment(a)}
+                    disabled={busy}
+                    className="text-xs text-red-600 hover:underline disabled:opacity-60"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="flex-1 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:text-slate-600 hover:file:bg-slate-200"
+          />
+          <button
+            onClick={onUploadAttachment}
+            disabled={uploading}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-60"
+          >
+            {uploading ? 'Enviando…' : 'Enviar anexo'}
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-slate-400">Tamanho máximo: 15 MB por arquivo.</p>
       </section>
 
       <section className="mt-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

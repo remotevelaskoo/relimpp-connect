@@ -1,25 +1,39 @@
+import * as fs from 'fs';
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Post,
   Query,
+  Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../core/auth/permissions.guard';
 import { RequirePermission } from '../../core/auth/permission.decorator';
 import { CurrentUser } from '../../core/auth/current-user.decorator';
 import { PurchaseRequestService } from './purchase-request.service';
 import {
+  attachmentAbsolutePath,
+  purchaseRequestAttachmentStorage,
+} from './attachment-storage.util';
+import {
   CancelDto,
   CreatePurchaseRequestDto,
   DecisionDto,
   UpdatePurchaseRequestDto,
 } from './dto/purchase-request.dto';
+
+const MAX_ATTACHMENT_SIZE = 15 * 1024 * 1024; // 15MB
 
 @ApiTags('purchase-requests')
 @ApiBearerAuth()
@@ -100,5 +114,48 @@ export class PurchaseRequestController {
     @CurrentUser() user: { id: string },
   ) {
     return this.service.cancel(id, dto, user.id);
+  }
+
+  @Post(':id/attachments')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: purchaseRequestAttachmentStorage(),
+      limits: { fileSize: MAX_ATTACHMENT_SIZE },
+    }),
+  )
+  uploadAttachment(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: { id?: string },
+  ) {
+    if (!file) {
+      throw new BadRequestException('Nenhum arquivo enviado (campo "file").');
+    }
+    const storagePath = `${id}/${file.filename}`;
+    return this.service.addAttachment(id, file, storagePath, user?.id);
+  }
+
+  @Get(':id/attachments/:attachmentId/download')
+  async downloadAttachment(
+    @Param('id') id: string,
+    @Param('attachmentId') attachmentId: string,
+    @Res() res: Response,
+  ) {
+    const attachment = await this.service.getAttachment(id, attachmentId);
+    res.download(attachmentAbsolutePath(attachment.storagePath), attachment.fileName);
+  }
+
+  @Delete(':id/attachments/:attachmentId')
+  async removeAttachment(
+    @Param('id') id: string,
+    @Param('attachmentId') attachmentId: string,
+    @CurrentUser() user: { id?: string },
+  ) {
+    const result = await this.service.removeAttachment(id, attachmentId, user?.id);
+    fs.unlink(attachmentAbsolutePath(result.storagePath), () => {
+      // best-effort: se o arquivo já não existir, ignora.
+    });
+    return { deleted: true };
   }
 }

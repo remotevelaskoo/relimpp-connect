@@ -41,6 +41,7 @@ export class PurchaseRequestService {
       include: {
         items: true,
         events: { orderBy: { createdAt: 'asc' } },
+        attachments: { orderBy: { createdAt: 'asc' } },
         ...scopeInclude,
       },
     });
@@ -195,6 +196,58 @@ export class PurchaseRequestService {
       type: 'CANCELLED',
       message: `Solicitação cancelada: ${dto.reason}`,
     });
+  }
+
+  async addAttachment(
+    id: string,
+    file: Express.Multer.File,
+    storagePath: string,
+    actorId?: string,
+  ) {
+    await this.getRaw(id);
+    await this.prisma.purchaseRequestAttachment.create({
+      data: {
+        requestId: id,
+        fileName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        storagePath,
+        uploadedBy: actorId,
+      },
+    });
+    await this.prisma.purchaseRequestEvent.create({
+      data: {
+        requestId: id,
+        type: 'ATTACHMENT_ADDED',
+        message: `Anexo adicionado: ${file.originalname}`,
+        actorId,
+      },
+    });
+    return this.get(id);
+  }
+
+  async getAttachment(id: string, attachmentId: string) {
+    const attachment = await this.prisma.purchaseRequestAttachment.findUnique({
+      where: { id: attachmentId },
+    });
+    if (!attachment || attachment.requestId !== id) {
+      throw new NotFoundException('Anexo não encontrado nesta solicitação.');
+    }
+    return attachment;
+  }
+
+  async removeAttachment(id: string, attachmentId: string, actorId?: string) {
+    const attachment = await this.getAttachment(id, attachmentId);
+    await this.prisma.purchaseRequestAttachment.delete({ where: { id: attachmentId } });
+    await this.prisma.purchaseRequestEvent.create({
+      data: {
+        requestId: id,
+        type: 'ATTACHMENT_REMOVED',
+        message: `Anexo removido: ${attachment.fileName}`,
+        actorId,
+      },
+    });
+    return { deleted: true, storagePath: attachment.storagePath };
   }
 
   // Garante que filial/departamento/obra/centro de custo/categoria informados

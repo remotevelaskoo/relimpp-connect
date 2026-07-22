@@ -17,6 +17,9 @@ out/
 # Prisma
 backend/prisma/*.db
 
+# Arquivos enviados (armazenamento local em disco — ver docs/04-database/README.md)
+backend/uploads/
+
 # PostgreSQL de desenvolvimento local (Windows, sem Docker)
 infrastructure/local-db-windows/data/
 infrastructure/local-db-windows/logfile
