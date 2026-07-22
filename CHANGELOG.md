@@ -6,6 +6,10 @@ O formato seguirá os princípios de **Keep a Changelog** e versionamento semân
 
 ## [Não lançado]
 
+### Corrigido
+
+- Autenticação: `JwtModule` lia `process.env.JWT_SECRET` na ordem de import (antes do `ConfigModule` carregar o `.env`), assinando tokens com o segredo padrão `dev-secret` enquanto a validação (`JwtStrategy`) usava o valor real do `.env` — qualquer `JWT_SECRET` customizado quebrava login e todas as rotas autenticadas (`401` em `/auth/me` e demais). Corrigido com `JwtModule.registerAsync` + `ConfigService` em ambos os pontos.
+
 ### Adicionado
 
 - Estrutura inicial de governança e documentação.
