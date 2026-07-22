@@ -17,6 +17,10 @@ out/
 # Prisma
 backend/prisma/*.db
 
+# PostgreSQL de desenvolvimento local (Windows, sem Docker)
+infrastructure/local-db-windows/data/
+infrastructure/local-db-windows/logfile
+
 # Logs
 *.log
 npm-debug.log*

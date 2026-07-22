@@ -29,6 +29,9 @@ Comandos padrão estão documentados em `backend/README.md` e `frontend/README.m
   - `sudo apt-get update && sudo apt-get install -y postgresql`
   - `sudo pg_ctlcluster 16 main start`
   - criar role/DB: role `relimpp` (senha `relimpp`) com `CREATEDB`, e database `relimpp_connect`.
+- **Windows sem Docker e sem admin (não dá para instalar o PostgreSQL como serviço):** use
+  `infrastructure/local-db-windows/` (`npm install && npm start`) — PostgreSQL real, persistente, mesmas
+  credenciais, sem precisar de elevação. Ver o README daquela pasta.
 - **`prisma migrate dev` precisa de um shadow database**: o role do banco precisa de permissão `CREATEDB` (`ALTER ROLE relimpp CREATEDB;`). Sem isso, falha com `P3014`. `prisma migrate deploy` não usa shadow DB.
 - Os arquivos `.env` (backend) e `.env.local` (frontend) não são versionados; copie de `.env.example`.
 

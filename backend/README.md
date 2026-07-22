@@ -16,6 +16,8 @@ prisma/          # schema, migrações e seed
 ## Rodando em desenvolvimento
 
 Pré-requisito: PostgreSQL acessível conforme `DATABASE_URL` (ver `infrastructure/docker/docker-compose.dev.yml`).
+Sem Docker e sem privilégios de administrador no Windows? Use `infrastructure/local-db-windows/` (mesmas
+credenciais, nada a configurar).
 
 ```bash
 cp .env.example .env         # ajuste DATABASE_URL/JWT_SECRET se necessário

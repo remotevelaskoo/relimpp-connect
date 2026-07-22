@@ -12,6 +12,7 @@ O formato seguirá os princípios de **Keep a Changelog** e versionamento semân
 
 ### Adicionado
 
+- `infrastructure/local-db-windows/`: PostgreSQL local persistente para Windows sem Docker e sem privilégios de administrador (binários oficiais do Postgres 16 via `embedded-postgres`, mesmas credenciais do `docker-compose.dev.yml`).
 - Estrutura inicial de governança e documentação.
 - Templates de Issues e Pull Requests.
 - ADRs iniciais da plataforma.

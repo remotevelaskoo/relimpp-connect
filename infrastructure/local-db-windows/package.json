@@ -1,0 +1,17 @@
+{
+  "name": "relimpp-local-db-windows",
+  "version": "1.0.0",
+  "description": "PostgreSQL local persistente para dev no Windows, sem Docker e sem privilegios de administrador.",
+  "scripts": {
+    "start": "node start.mjs",
+    "stop": "node stop.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "embedded-postgres": "^16.14.0-beta.17"
+  }
+}
