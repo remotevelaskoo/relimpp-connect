@@ -68,6 +68,15 @@ As quatro rotas compartilham o mesmo `BaseOrgUnitController` genérico — mesmo
 > (ver [Database Book §6.1](../04-database/README.md#6-divergências-conhecidas-entre-o-blueprintespecificação-e-o-schema-atual)).
 > O frontend já traduz isso na UI (`/dashboard/obras` chama a API em `/projects`).
 
+### 3.3 Categorias (`/categories`)
+
+| Método | Rota | Regras |
+|---|---|---|
+| `GET` | `/categories?type=` | Só leitura — sem `POST`/`PATCH`/`DELETE` ainda (categorias são geridas via seed). `type` filtra por `purchase`, `supplier` ou `document`; sem filtro, retorna todas as ativas. |
+
+Usada hoje para popular o seletor de "Tipo/categoria" da Tela 031 (Nova Solicitação). Uma tela de
+administração para gerenciar categorias (criar/editar/inativar) ainda não existe.
+
 ## 4. Fornecedores (Suppliers) (`/suppliers`)
 
 | Método | Rota | Corpo | Regras |
@@ -158,7 +167,7 @@ Desde este volume, permissão deixou de ser só um cadastro e passou a ser **ver
 |---|---|---|---|
 | `GET` | `/purchase-requests?companyId=` | — | Inclui `requester`, `company` e contagem de itens; `number` (`SC-000123`) calculado a partir de `seq`. |
 | `GET` | `/purchase-requests/:id` | — | Inclui `items[]` e `events[]` (timeline, ordenada por `createdAt asc`). |
-| `POST` | `/purchase-requests` | `{ companyId, justification, priority?, items: [{ description, specification?, quantity, unit, estimatedPrice? }] }` | `items` exige ao menos 1 (`@ArrayMinSize(1)`); cria em `DRAFT`; gera evento `CREATED`. |
+| `POST` | `/purchase-requests` | `{ companyId, justification, priority?, branchId?, departmentId?, projectId?, costCenterId?, categoryId?, criticality?, confidential?, items: [{ description, specification?, quantity, unit, estimatedPrice?, neededDate?, deliveryLocation? }] }` | `items` exige ao menos 1 (`@ArrayMinSize(1)`); cria em `DRAFT`; gera evento `CREATED`. `branchId`/`departmentId`/`projectId`/`costCenterId`, quando informados, precisam pertencer à mesma `companyId` (`400` se não pertencerem); `categoryId` precisa ser uma `Category` com `type = "purchase"`. |
 | `PATCH` | `/purchase-requests/:id` | Parcial do create (sem `companyId`) | Só permitido em `DRAFT` ou `RETURNED` (`400` fora disso); se `items` for enviado, **substitui todos os itens** (delete + recreate, não faz merge). |
 | `POST` | `/purchase-requests/:id/submit` | — | `DRAFT\|RETURNED → SUBMITTED`. 🔒 `purchase_request:submit`. |
 | `POST` | `/purchase-requests/:id/approve` | — | `SUBMITTED → APPROVED`. 🔒 `purchase_request:approve`. |
@@ -175,8 +184,9 @@ Toda transição roda em uma função `transition()` única que: atualiza `statu
 configurável no [Database Book §3.4](../04-database/README.md#34-módulo-de-compras--solicitação-mvp-1).
 
 **O que a Especificação/Blueprint pedem e ainda não existe nesta rota:** aprovação por alçada/valor,
-aprovação paralela ou por maioria, delegação de aprovador, anexos, e vínculo com filial/departamento/obra/
-centro de custo.
+aprovação paralela ou por maioria, delegação de aprovador e anexos. Vínculo organizacional (filial/
+departamento/obra/centro de custo) e classificação (tipo/categoria, criticidade, confidencialidade) **já
+existem** (seção 8.1 da Especificação) — ver [Database Book §3.4](../04-database/README.md#34-módulo-de-compras--solicitação-mvp-1).
 
 ## 7. Health (`/health`)
 

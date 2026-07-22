@@ -48,6 +48,8 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  purchaseRequests PurchaseRequest[]
+
   @@index([companyId])
 }
 
@@ -60,6 +62,8 @@ model Department {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  purchaseRequests PurchaseRequest[]
 
   @@index([companyId])
 }
@@ -74,6 +78,8 @@ model Project {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  purchaseRequests PurchaseRequest[]
+
   @@index([companyId])
 }
 
@@ -86,6 +92,8 @@ model CostCenter {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  purchaseRequests PurchaseRequest[]
 
   @@index([companyId])
 }
@@ -165,6 +173,8 @@ model Category {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 
+  purchaseRequests PurchaseRequest[]
+
   @@unique([type, key])
 }
 
@@ -227,6 +237,25 @@ model PurchaseRequest {
   priority      String  @default("medium") // low | medium | high | urgent
   status        String  @default("DRAFT")
 
+  // Vínculo organizacional (Especificação, seção 8.1 "Identificação") — todos opcionais
+  // e, quando informados, devem pertencer à mesma companyId (validado no service).
+  branchId     String?
+  branch       Branch?     @relation(fields: [branchId], references: [id])
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  projectId    String?
+  project      Project?    @relation(fields: [projectId], references: [id])
+  costCenterId String?
+  costCenter   CostCenter? @relation(fields: [costCenterId], references: [id])
+
+  // Tipo/categoria (Especificação, seção 8.1 "Tipo") — Category com type = "purchase".
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  // Classificação (Especificação, seção 8.1 "Classificação"): priority já cobre urgência.
+  criticality String? // low | medium | high
+  confidential Boolean @default(false)
+
   items  PurchaseRequestItem[]
   events PurchaseRequestEvent[]
 
@@ -241,14 +270,18 @@ model PurchaseRequest {
 }
 
 model PurchaseRequestItem {
-  id            String          @id @default(uuid())
-  requestId     String
-  request       PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  description   String
-  specification String?
-  quantity      Float           @default(1)
-  unit          String          @default("un")
+  id             String          @id @default(uuid())
+  requestId      String
+  request        PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  description    String
+  specification  String?
+  quantity       Float           @default(1)
+  unit           String          @default("un")
   estimatedPrice Float?
+  // Especificação, seção 8.1 "Itens": data necessária e local de entrega são por item
+  // (itens diferentes de uma mesma solicitação podem ter prazos/locais distintos).
+  neededDate       DateTime?
+  deliveryLocation String?
 
   @@index([requestId])
 }

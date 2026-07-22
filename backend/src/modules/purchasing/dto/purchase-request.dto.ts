@@ -3,6 +3,8 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
+  IsDateString,
   IsIn,
   IsNumber,
   IsOptional,
@@ -15,6 +17,7 @@ import {
 } from 'class-validator';
 
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+const CRITICALITIES = ['low', 'medium', 'high'];
 
 export class PurchaseRequestItemDto {
   @ApiProperty({ example: 'Cimento CP-II 50kg' })
@@ -44,6 +47,17 @@ export class PurchaseRequestItemDto {
   @IsNumber()
   @Min(0)
   estimatedPrice?: number;
+
+  @ApiPropertyOptional({ example: '2026-08-15', description: 'Data em que o item é necessário.' })
+  @IsOptional()
+  @IsDateString()
+  neededDate?: string;
+
+  @ApiPropertyOptional({ example: 'Obra Centro - Almoxarifado' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  deliveryLocation?: string;
 }
 
 export class CreatePurchaseRequestDto {
@@ -61,6 +75,43 @@ export class CreatePurchaseRequestDto {
   @IsOptional()
   @IsIn(PRIORITIES)
   priority?: string;
+
+  // Vínculo organizacional (Especificação, seção 8.1). Todos opcionais; quando
+  // informados, o service valida que pertencem à mesma companyId.
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  branchId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  departmentId?: string;
+
+  @ApiPropertyOptional({ description: 'Obra.' })
+  @IsOptional()
+  @IsUUID()
+  projectId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  costCenterId?: string;
+
+  @ApiPropertyOptional({ description: 'Categoria da Category com type="purchase".' })
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string;
+
+  @ApiPropertyOptional({ enum: CRITICALITIES })
+  @IsOptional()
+  @IsIn(CRITICALITIES)
+  criticality?: string;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  confidential?: boolean;
 
   @ApiProperty({ type: [PurchaseRequestItemDto] })
   @IsArray()

@@ -5,6 +5,7 @@ import { HealthModule } from './core/health/health.module';
 import { AuthModule } from './core/auth/auth.module';
 import { UsersModule } from './platform/users/users.module';
 import { OrganizationModule } from './platform/organization/organization.module';
+import { CategoriesModule } from './platform/categories/categories.module';
 import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 
@@ -16,6 +17,7 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
     AuthModule,
     UsersModule,
     OrganizationModule,
+    CategoriesModule,
     PurchasingModule,
     SuppliersModule,
   ],

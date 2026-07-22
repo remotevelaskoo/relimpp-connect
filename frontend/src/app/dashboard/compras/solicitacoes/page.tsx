@@ -10,12 +10,24 @@ interface Company {
   name: string;
 }
 
+interface OrgUnit {
+  id: string;
+  name: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+}
+
 interface ItemForm {
   description: string;
   specification: string;
   quantity: string;
   unit: string;
   estimatedPrice: string;
+  neededDate: string;
+  deliveryLocation: string;
 }
 
 interface RequestRow {
@@ -29,20 +41,41 @@ interface RequestRow {
   _count: { items: number };
 }
 
+const CRITICALITY_LABEL: Record<string, string> = {
+  low: 'Baixa',
+  medium: 'Média',
+  high: 'Alta',
+};
+
 const emptyItem = (): ItemForm => ({
   description: '',
   specification: '',
   quantity: '1',
   unit: 'un',
   estimatedPrice: '',
+  neededDate: '',
+  deliveryLocation: '',
 });
 
 export default function SolicitacoesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companyId, setCompanyId] = useState('');
+  const [branches, setBranches] = useState<OrgUnit[]>([]);
+  const [departments, setDepartments] = useState<OrgUnit[]>([]);
+  const [projects, setProjects] = useState<OrgUnit[]>([]);
+  const [costCenters, setCostCenters] = useState<OrgUnit[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [rows, setRows] = useState<RequestRow[]>([]);
+
   const [justification, setJustification] = useState('');
   const [priority, setPriority] = useState('medium');
+  const [branchId, setBranchId] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [costCenterId, setCostCenterId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [criticality, setCriticality] = useState('');
+  const [confidential, setConfidential] = useState(false);
   const [items, setItems] = useState<ItemForm[]>([emptyItem()]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -68,10 +101,28 @@ export default function SolicitacoesPage() {
       .catch((err) =>
         setError(err instanceof Error ? err.message : 'Erro ao carregar'),
       );
+    api<Category[]>('/categories?type=purchase')
+      .then(setCategories)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
     load(companyId);
+    if (!companyId) {
+      setBranches([]);
+      setDepartments([]);
+      setProjects([]);
+      setCostCenters([]);
+      return;
+    }
+    api<OrgUnit[]>(`/branches?companyId=${companyId}`).then(setBranches).catch(() => {});
+    api<OrgUnit[]>(`/departments?companyId=${companyId}`).then(setDepartments).catch(() => {});
+    api<OrgUnit[]>(`/projects?companyId=${companyId}`).then(setProjects).catch(() => {});
+    api<OrgUnit[]>(`/cost-centers?companyId=${companyId}`).then(setCostCenters).catch(() => {});
+    setBranchId('');
+    setDepartmentId('');
+    setProjectId('');
+    setCostCenterId('');
   }, [companyId, load]);
 
   function updateItem(idx: number, patch: Partial<ItemForm>) {
@@ -95,6 +146,13 @@ export default function SolicitacoesPage() {
           companyId,
           justification,
           priority,
+          branchId: branchId || undefined,
+          departmentId: departmentId || undefined,
+          projectId: projectId || undefined,
+          costCenterId: costCenterId || undefined,
+          categoryId: categoryId || undefined,
+          criticality: criticality || undefined,
+          confidential,
           items: items.map((i) => ({
             description: i.description,
             specification: i.specification || undefined,
@@ -103,11 +161,20 @@ export default function SolicitacoesPage() {
             estimatedPrice: i.estimatedPrice
               ? Number(i.estimatedPrice)
               : undefined,
+            neededDate: i.neededDate || undefined,
+            deliveryLocation: i.deliveryLocation || undefined,
           })),
         }),
       });
       setJustification('');
       setPriority('medium');
+      setBranchId('');
+      setDepartmentId('');
+      setProjectId('');
+      setCostCenterId('');
+      setCategoryId('');
+      setCriticality('');
+      setConfidential(false);
       setItems([emptyItem()]);
       await load(companyId);
     } catch (err) {
@@ -159,22 +226,125 @@ export default function SolicitacoesPage() {
               minLength={3}
             />
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-sm text-slate-600">
+                Prioridade
+              </label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-brand"
+              >
+                {Object.entries(PRIORITY_LABEL).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-slate-600">
+                Criticidade
+              </label>
+              <select
+                value={criticality}
+                onChange={(e) => setCriticality(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-brand"
+              >
+                <option value="">Não informada</option>
+                {Object.entries(CRITICALITY_LABEL).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div>
             <label className="mb-1 block text-sm text-slate-600">
-              Prioridade
+              Tipo / categoria
             </label>
             <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-brand"
             >
-              {Object.entries(PRIORITY_LABEL).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
+              <option value="">Não informado</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </select>
           </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Vínculo organizacional (opcional)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+              >
+                <option value="">Filial</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value)}
+                className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+              >
+                <option value="">Departamento</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+              >
+                <option value="">Obra</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={costCenterId}
+                onChange={(e) => setCostCenterId(e.target.value)}
+                className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand"
+              >
+                <option value="">Centro de custo</option>
+                {costCenters.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={confidential}
+              onChange={(e) => setConfidential(e.target.checked)}
+            />
+            Solicitação confidencial
+          </label>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -233,6 +403,34 @@ export default function SolicitacoesPage() {
                     placeholder="Preço est."
                     className="rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-brand"
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-0.5 block text-xs text-slate-500">
+                      Data necessária
+                    </label>
+                    <input
+                      value={item.neededDate}
+                      onChange={(e) =>
+                        updateItem(idx, { neededDate: e.target.value })
+                      }
+                      type="date"
+                      className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-brand"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-0.5 block text-xs text-slate-500">
+                      Local de entrega
+                    </label>
+                    <input
+                      value={item.deliveryLocation}
+                      onChange={(e) =>
+                        updateItem(idx, { deliveryLocation: e.target.value })
+                      }
+                      placeholder="Ex.: Almoxarifado Obra Centro"
+                      className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-brand"
+                    />
+                  </div>
                 </div>
                 {items.length > 1 && (
                   <button

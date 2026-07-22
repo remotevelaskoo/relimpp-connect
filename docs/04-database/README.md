@@ -78,8 +78,8 @@ Category  (tabela solta, sem FK — classificação genérica por "type")
 
 | Tabela | Campos próprios | Relacionamentos | Observações |
 |---|---|---|---|
-| **PurchaseRequest** | `seq` (autoincrement, vira número exibível `SC-000123`), `justification`, `priority` (`low\|medium\|high\|urgent`), `status` (ver máquina de estados abaixo) | N—1 Company, N—1 User (requester), 1—N PurchaseRequestItem, 1—N PurchaseRequestEvent | `@@index([companyId])`, `@@index([status])`. **Não tem ainda** `branchId`/`departmentId`/`projectId`/`costCenterId` — a Especificação (seção 8.1) prevê esses vínculos, mas o schema atual só escopa por `companyId`. |
-| **PurchaseRequestItem** | `description`, `specification?`, `quantity` (Float), `unit`, `estimatedPrice?` | N—1 PurchaseRequest (`onDelete: Cascade`) | Não referencia `Category` nem um catálogo de produto — descrição livre por enquanto (catálogo corporativo é módulo futuro). |
+| **PurchaseRequest** | `seq` (autoincrement, vira número exibível `SC-000123`), `justification`, `priority` (`low\|medium\|high\|urgent`), `status` (ver máquina de estados abaixo), `criticality?` (`low\|medium\|high`), `confidential` (padrão `false`) | N—1 Company, N—1 User (requester), N—1 Branch/Department/Project/CostCenter/Category (todos opcionais), 1—N PurchaseRequestItem, 1—N PurchaseRequestEvent | `@@index([companyId])`, `@@index([status])`. Vínculo organizacional (Especificação, seção 8.1) implementado: `branchId`/`departmentId`/`projectId`/`costCenterId`, validados no service para pertencerem à mesma `companyId` da solicitação. `categoryId` referencia `Category` com `type = "purchase"`. |
+| **PurchaseRequestItem** | `description`, `specification?`, `quantity` (Float), `unit`, `estimatedPrice?`, `neededDate?`, `deliveryLocation?` | N—1 PurchaseRequest (`onDelete: Cascade`) | `neededDate`/`deliveryLocation` por item (Especificação, seção 8.1 "Itens") — itens diferentes da mesma solicitação podem ter prazos/locais distintos. Não referencia um catálogo de produto — descrição livre por enquanto (catálogo corporativo é módulo futuro). |
 | **PurchaseRequestEvent** | `type`, `message`, `actorId?` | N—1 PurchaseRequest (`onDelete: Cascade`) | É a **timeline** da solicitação (ver [V03 §4](../11-blueprint/v03-mapa-navegacao.md#4-fluxo-interno-padrão-de-uma-tela-de-processo)). Guarda só texto — sem diff estruturado de campos alterados (Apêndice B da Especificação pede "valor anterior e novo" em alterações críticas; ainda não implementado). |
 
 #### Máquina de estados de `PurchaseRequest.status`
@@ -131,7 +131,8 @@ status. `suspend`, `block` e `inactivate` exigem motivo (mín. 3 caracteres), gr
 | `20260721192635_init` | Schema inicial completo (organização, RBAC, categorias). |
 | `20260721200254_add_department_code` | Adiciona `code` a `Department`. |
 | `20260721210854_purchasing_requests` | Tabelas `PurchaseRequest`, `PurchaseRequestItem`, `PurchaseRequestEvent`. |
-| `20260721213000_add_suppliers` | Tabelas `Supplier`, `SupplierEvent`. **Escrita à mão** (sem `prisma migrate dev`) — este ambiente não tinha PostgreSQL disponível para gerar a migração automaticamente; a sintaxe segue exatamente o padrão das migrações anteriores. Rode `prisma migrate deploy` (ou `db push` num ambiente de teste) para validar antes do próximo `migrate dev`. |
+| `20260721213000_add_suppliers` | Tabelas `Supplier`, `SupplierEvent`. **Escrita à mão** (sem `prisma migrate dev`) — na época este ambiente não tinha PostgreSQL disponível para gerar a migração automaticamente; a sintaxe segue exatamente o padrão das migrações anteriores. Já validada: aplicou sem erro num `prisma migrate deploy` real (ver `20260722022455` abaixo). |
+| `20260722022455_purchase_request_scope_and_item_fields` | Vínculo organizacional (`branchId`/`departmentId`/`projectId`/`costCenterId`), `categoryId`, `criticality`, `confidential` em `PurchaseRequest`; `neededDate`/`deliveryLocation` em `PurchaseRequestItem`. Gerada normalmente via `prisma migrate dev` — este ambiente já tem PostgreSQL local (`infrastructure/local-db-windows/`). |
 
 Gerar nova migração: `cd backend && npm run prisma:migrate` (ver [AGENTS.md](../../AGENTS.md) para o
 gotcha de shadow database em ambientes sem Docker).
@@ -149,9 +150,12 @@ Registradas aqui para não serem perdidas — tratar como backlog de modelagem, 
 1. **Nomenclatura Project vs. Obras.** O schema usa `Project`/`projects` (API) mas o produto, o menu (V02)
    e a UI chamam essa entidade de "Obras". Decidir se o nome técnico muda para `Site`/`Obra` ou se a
    tradução na camada de apresentação é suficiente — hoje só a UI traduz.
-2. **Escopo organizacional incompleto.** `UserRoleScope` e `PurchaseRequest` só têm `companyId`. O V07
-   (Perfis e Permissões) e a Especificação (seção 5) definem escopo também por filial, departamento, obra
-   e centro de custo — falta estender o schema quando esse nível de granularidade for necessário.
+2. **Escopo organizacional incompleto — mas só em `UserRoleScope`.** `PurchaseRequest` já tem
+   `branchId`/`departmentId`/`projectId`/`costCenterId` (seção 3.4). `UserRoleScope` continua só com
+   `companyId`: o V07 (Perfis e Permissões) e a Especificação (seção 5) definem escopo de **papel** também
+   por filial/departamento/obra/centro de custo, mas isso ainda não existe — na prática, o `PermissionsGuard`
+   (ver [API Book §5.3](../05-api/README.md#53-como-o-rbac-é-aplicado-permissionsguard)) checa só "o usuário
+   tem o papel em algum lugar", não "neste registro/filial específico".
 3. **RLS não implementada.** ADR-0005 propõe Row-Level Security como camada adicional; hoje o isolamento é
    só por filtro de aplicação (`where: { companyId }` nos services). Risco: um service que esqueça o
    filtro vaza dados entre empresas.

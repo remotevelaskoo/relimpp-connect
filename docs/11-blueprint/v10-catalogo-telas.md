@@ -208,19 +208,21 @@ Aprovação, Recebimentos, Assinaturas, Favoritos, Recentes. Ações rápidas in
 ### Tela 031 — Nova Solicitação
 - **Módulo:** Compras · **Rota:** `/compras/solicitacoes/nova`
 - **Objetivo:** criar solicitação (rascunho) com itens.
-- **Campos (meta — Especificação sec. 8.1):** empresa, **filial, departamento, obra, centro de custo**,
-  **tipo/categoria**, justificativa (motivo/finalidade/urgência), prioridade/classificação, **itens**
-  (produto/serviço, descrição, especificação, quantidade, unidade, **data necessária**, **local de
-  entrega**, preço estimado), **anexos**.
+- **Campos (Especificação sec. 8.1):** empresa, **filial, departamento, obra, centro de custo** (seletores
+  opcionais, populados por `/branches`, `/departments`, `/projects`, `/cost-centers` filtrados pela
+  empresa), **tipo/categoria** (`/categories?type=purchase`), justificativa, prioridade, **criticidade**,
+  **confidencial** (checkbox), **itens** (descrição, especificação, quantidade, unidade, preço estimado,
+  **data necessária**, **local de entrega** — estes dois últimos por item, não por solicitação). **Anexos**
+  ainda não existem (sem sistema de upload/armazenamento no projeto).
 - **Ações:** adicionar/remover item; salvar rascunho; salvar e enviar.
-- **Validações:** campos obrigatórios; ao menos 1 item; dados organizacionais no escopo.
+- **Validações:** campos obrigatórios; ao menos 1 item; filial/departamento/obra/centro de custo, quando
+  informados, precisam pertencer à empresa selecionada (`400` da API se não pertencerem).
 - **Eventos:** `PurchaseRequestCreated`.
 - **Navegação:** → Solicitação (032).
-- **Dados/API:** `POST /purchase-requests`.
+- **Dados/API:** `POST /purchase-requests`, `GET /categories?type=purchase`, `GET /branches|departments|projects|cost-centers?companyId=`.
 - **Regras:** rascunho editável; itens do catálogo autopreenchem descrição/unidade/especificação
   (futuro); duplicação de solicitações preservando rastreabilidade.
-- **Status:** 🔄 MVP cobre um subconjunto (empresa, justificativa, prioridade, itens simples). Faltam
-  filial/depto/obra/CC, tipo/categoria, data necessária, local de entrega, anexos, classificação.
+- **Status:** ✅ implementado no MVP — cobre todos os campos da seção 8.1 exceto anexos.
 
 ### Tela 032 — Solicitação (detalhe)
 - **Módulo:** Compras · **Rota:** `/compras/solicitacoes/:id`

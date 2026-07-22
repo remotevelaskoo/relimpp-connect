@@ -13,6 +13,8 @@ interface Item {
   quantity: number;
   unit: string;
   estimatedPrice: number | null;
+  neededDate: string | null;
+  deliveryLocation: string | null;
 }
 
 interface Event {
@@ -22,6 +24,11 @@ interface Event {
   createdAt: string;
 }
 
+interface NamedRef {
+  id: string;
+  name: string;
+}
+
 interface RequestDetail {
   id: string;
   number: string;
@@ -29,11 +36,24 @@ interface RequestDetail {
   priority: string;
   justification: string;
   createdAt: string;
+  criticality: string | null;
+  confidential: boolean;
   company: { name: string };
   requester: { name: string; email: string };
+  branch: NamedRef | null;
+  department: NamedRef | null;
+  project: NamedRef | null;
+  costCenter: NamedRef | null;
+  category: NamedRef | null;
   items: Item[];
   events: Event[];
 }
+
+const CRITICALITY_LABEL: Record<string, string> = {
+  low: 'Baixa',
+  medium: 'Média',
+  high: 'Alta',
+};
 
 export default function SolicitacaoDetailPage() {
   const params = useParams();
@@ -122,14 +142,32 @@ export default function SolicitacaoDetailPage() {
 
       <div className="mt-3 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">{req.number}</h1>
-        <span className={`rounded-full px-3 py-1 text-sm ${meta.className}`}>
-          {meta.label}
-        </span>
+        <div className="flex items-center gap-2">
+          {req.confidential && (
+            <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-white">
+              Confidencial
+            </span>
+          )}
+          <span className={`rounded-full px-3 py-1 text-sm ${meta.className}`}>
+            {meta.label}
+          </span>
+        </div>
       </div>
       <p className="mt-1 text-sm text-slate-500">
         {req.company.name} · Solicitante: {req.requester.name} · Prioridade:{' '}
         {PRIORITY_LABEL[req.priority] ?? req.priority}
+        {req.criticality && (
+          <> · Criticidade: {CRITICALITY_LABEL[req.criticality] ?? req.criticality}</>
+        )}
+        {req.category && <> · {req.category.name}</>}
       </p>
+      {(req.branch || req.department || req.project || req.costCenter) && (
+        <p className="mt-1 text-sm text-slate-500">
+          {[req.branch?.name, req.department?.name, req.project?.name, req.costCenter?.name]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      )}
 
       {error && (
         <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -198,6 +236,8 @@ export default function SolicitacaoDetailPage() {
               <th className="py-2">Descrição</th>
               <th className="py-2">Qtd</th>
               <th className="py-2">Unid.</th>
+              <th className="py-2">Necessário em</th>
+              <th className="py-2">Local de entrega</th>
               <th className="py-2 text-right">Preço est.</th>
             </tr>
           </thead>
@@ -214,6 +254,14 @@ export default function SolicitacaoDetailPage() {
                 </td>
                 <td className="py-2 text-slate-600">{i.quantity}</td>
                 <td className="py-2 text-slate-600">{i.unit}</td>
+                <td className="py-2 text-slate-600">
+                  {i.neededDate
+                    ? new Date(i.neededDate).toLocaleDateString('pt-BR', {
+                        timeZone: 'UTC',
+                      })
+                    : '—'}
+                </td>
+                <td className="py-2 text-slate-600">{i.deliveryLocation ?? '—'}</td>
                 <td className="py-2 text-right text-slate-600">
                   {i.estimatedPrice != null
                     ? i.estimatedPrice.toLocaleString('pt-BR', {
