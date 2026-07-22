@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../core/auth/permissions.guard';
+import { RequirePermission } from '../../core/auth/permission.decorator';
 import { CurrentUser } from '../../core/auth/current-user.decorator';
 import { PurchaseRequestService } from './purchase-request.service';
 import {
@@ -54,16 +56,22 @@ export class PurchaseRequestController {
   }
 
   @Post(':id/submit')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('purchase_request:submit')
   submit(@Param('id') id: string, @CurrentUser() user: { id: string }) {
     return this.service.submit(id, user.id);
   }
 
   @Post(':id/approve')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('purchase_request:approve')
   approve(@Param('id') id: string, @CurrentUser() user: { id: string }) {
     return this.service.approve(id, user.id);
   }
 
   @Post(':id/reject')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('purchase_request:reject')
   reject(
     @Param('id') id: string,
     @Body() dto: DecisionDto,
@@ -73,6 +81,8 @@ export class PurchaseRequestController {
   }
 
   @Post(':id/return')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('purchase_request:return')
   returnForAdjustment(
     @Param('id') id: string,
     @Body() dto: DecisionDto,
@@ -82,6 +92,8 @@ export class PurchaseRequestController {
   }
 
   @Post(':id/cancel')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('purchase_request:cancel')
   cancel(
     @Param('id') id: string,
     @Body() dto: CancelDto,

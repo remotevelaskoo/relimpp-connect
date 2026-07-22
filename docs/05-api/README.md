@@ -77,25 +77,33 @@ As quatro rotas compartilham o mesmo `BaseOrgUnitController` genérico — mesmo
 | `POST` | `/suppliers` | `{ companyId, name, tradeName?, cnpj?, email?, phone? }` | Cria em `PRE_REGISTERED`; gera evento `CREATED`; `409` se `(companyId, cnpj)` duplicado. |
 | `PATCH` | `/suppliers/:id` | Parcial do create + `active?` (sem `companyId`) | `400` se o fornecedor estiver `BLOCKED`. |
 | `DELETE` | `/suppliers/:id` | — | `409` fora de `PRE_REGISTERED` — para os demais status, use `inactivate`. |
-| `POST` | `/suppliers/:id/submit-for-review` | — | `PRE_REGISTERED → UNDER_REVIEW`. |
-| `POST` | `/suppliers/:id/approve` | `{ restricted?: boolean }` | `UNDER_REVIEW → APPROVED` (ou `RESTRICTED` se `restricted: true`). |
-| `POST` | `/suppliers/:id/suspend` | `{ reason }` | `APPROVED\|RESTRICTED → SUSPENDED`; motivo obrigatório. |
-| `POST` | `/suppliers/:id/block` | `{ reason }` | De qualquer status exceto `BLOCKED\|INACTIVE → BLOCKED`; motivo obrigatório. |
-| `POST` | `/suppliers/:id/reactivate` | — | `SUSPENDED\|BLOCKED → APPROVED`. |
-| `POST` | `/suppliers/:id/inactivate` | `{ reason }` | De qualquer status exceto `BLOCKED → INACTIVE`; motivo obrigatório. |
+| `POST` | `/suppliers/:id/submit-for-review` | — | `PRE_REGISTERED → UNDER_REVIEW`. 🔒 `supplier:submit_for_review`. |
+| `POST` | `/suppliers/:id/approve` | `{ restricted?: boolean }` | `UNDER_REVIEW → APPROVED` (ou `RESTRICTED` se `restricted: true`). 🔒 `supplier:approve`. |
+| `POST` | `/suppliers/:id/suspend` | `{ reason }` | `APPROVED\|RESTRICTED → SUSPENDED`; motivo obrigatório. 🔒 `supplier:suspend`. |
+| `POST` | `/suppliers/:id/block` | `{ reason }` | De qualquer status exceto `BLOCKED\|INACTIVE → BLOCKED`; motivo obrigatório. 🔒 `supplier:block`. |
+| `POST` | `/suppliers/:id/reactivate` | — | `SUSPENDED\|BLOCKED → APPROVED`. 🔒 `supplier:reactivate`. |
+| `POST` | `/suppliers/:id/inactivate` | `{ reason }` | De qualquer status exceto `BLOCKED → INACTIVE`; motivo obrigatório. 🔒 `supplier:inactivate`. |
 
 Mesmo padrão de `ensureStatus()`/`transition()` do módulo de Compras — ver a máquina de estados completa em
 [Database Book §3.5](../04-database/README.md#35-fornecedores--cadastro-e-homologação).
 
+🔒 = exige a permissão indicada via `@RequirePermission` + `PermissionsGuard` (ver
+[seção 5.3](#53-como-o-rbac-é-aplicado-permissionsguard)); `platform_admin` sempre passa. `GET`, `POST`
+(criar), `PATCH` e `DELETE` de `/suppliers` **não** têm checagem de permissão ainda — qualquer usuário
+autenticado pode cadastrar/editar/excluir um fornecedor em `PRE_REGISTERED`.
+
 **O que a Especificação/Blueprint pedem e ainda não existe nesta rota:** endereços, categorias de
-fornecimento, dados bancários, documentos com validade/vencimento, avaliação de desempenho, cálculo de
-risco, e qualquer checagem de papel/permissão nas ações de homologação (hoje qualquer usuário autenticado
-pode aprovar/bloquear um fornecedor). Este `/suppliers` é o cadastro interno — **não** é o Portal do
-Fornecedor (autenticação externa do próprio fornecedor), que continua sem nenhuma rota (ver seção 8).
+fornecimento, dados bancários, documentos com validade/vencimento, avaliação de desempenho e cálculo de
+risco. Este `/suppliers` é o cadastro interno — **não** é o Portal do Fornecedor (autenticação externa do
+próprio fornecedor), que continua sem nenhuma rota (ver seção 8).
 
 ## 5. Usuários, Papéis e Permissões (Users, Roles, Permissions)
 
 ### 5.1 Usuários (`/users`)
+
+| Método | Rota | Corpo | Regras |
+|---|---|---|---|
+Todas as rotas de `/users` exigem 🔒 `user:manage` (guarda de **controller inteiro**, não por ação).
 
 | Método | Rota | Corpo | Regras |
 |---|---|---|---|
@@ -112,6 +120,8 @@ deve ser excluído fisicamente"). Para desativar, use `PATCH { active: false }`.
 
 ### 5.2 Papéis (`/roles`) e Permissões (`/permissions`)
 
+Mesma regra: todas as rotas de `/roles` e `/permissions` exigem 🔒 `user:manage`.
+
 | Método | Rota | Corpo | Regras |
 |---|---|---|---|
 | `GET` | `/roles` | — | Inclui `permissions[]` (join com `Permission`). |
@@ -119,12 +129,28 @@ deve ser excluído fisicamente"). Para desativar, use `PATCH { active: false }`.
 | `POST` | `/roles` | `{ key (snake_case), name, description? }` | `409` se `key` duplicada. |
 | `PATCH` | `/roles/:id` | `{ name?, description? }` | `key` é imutável após criado. |
 | `PATCH` | `/roles/:id/permissions` | `{ permissionIds: string[] }` | **Substitui o conjunto inteiro** (delete-all + insert, numa transação) — não é incremental. `404` se algum id não existir. |
-| `GET` | `/permissions` | — | Lista fixa, hoje só as 5 permissões seedadas (`company:view/create/edit`, `user:view/create`). Sem `POST` — criar novas permissões ainda exige alterar o seed. |
+| `GET` | `/permissions` | — | Lista fixa: as 5 originais (`company:view/create/edit`, `user:view/create`) mais `user:manage` e as permissões de ação de Compras/Fornecedores (seção 5.3). Sem `POST` — criar novas permissões ainda exige alterar o seed. |
 
-**O que a Especificação/Blueprint pedem e ainda não existe:** nenhuma dessas permissões é **checada** em
-lugar nenhum da API ainda — `/roles` e `/permissions` só armazenam o modelo de dados. Ver
-[Database Book §3.2](../04-database/README.md#32-usuários-papéis-e-permissões-rbac--adr-0006) para o
-inventário completo do gap de RBAC (escopo por filial/obra/CC, segregação de funções, alçadas).
+### 5.3 Como o RBAC é aplicado (`PermissionsGuard`)
+
+Desde este volume, permissão deixou de ser só um cadastro e passou a ser **verificada** em algumas rotas:
+
+- Decorator `@RequirePermission('recurso:ação')` marca a rota (ou o controller inteiro); `PermissionsGuard`
+  lê essa metadata via `Reflector` e busca, no banco, todos os `UserRoleScope` do usuário autenticado — se
+  **algum** papel dele tiver a permissão exigida (em qualquer escopo de empresa) **ou** o papel for
+  `platform_admin` (bypass total, sempre passa), a requisição segue; senão, `403 Forbidden` com uma mensagem
+  citando a permissão que faltou.
+- A checagem é **por papel**, não por escopo de empresa: um `Gestor de Área` só vinculado à Empresa A ainda
+  consegue aprovar uma solicitação da Empresa B — o filtro fica só no `companyId` da query, não na
+  autorização (mesmo gap de escopo documentado no [Database Book §6.2](../04-database/README.md#6-divergências-conhecidas-entre-o-blueprintespecificação-e-o-schema-atual)).
+- Permissões seedadas por papel (`backend/prisma/seed.ts`, `ROLE_PERMISSIONS`): `requester` → submeter/
+  cancelar solicitação; `area_manager`/`director` → aprovar/rejeitar/devolver solicitação; `buyer` →
+  submeter/cancelar solicitação e todas as ações de homologação de fornecedor; `platform_admin` → tudo,
+  sempre.
+- **Rotas ainda sem `@RequirePermission`** (qualquer autenticado pode chamar): CRUD de Empresas/Filiais/
+  Departamentos/Obras/Centros de Custo, criar/editar/excluir Solicitação e Fornecedor (só as **transições de
+  status** têm dono). Ver [Database Book §6.4](../04-database/README.md#6-divergências-conhecidas-entre-o-blueprintespecificação-e-o-schema-atual)
+  para o inventário completo do que falta (segregação de funções, alçada por valor, aprovação paralela).
 
 ## 6. Compras — Solicitação (`/purchase-requests`)
 
@@ -134,20 +160,23 @@ inventário completo do gap de RBAC (escopo por filial/obra/CC, segregação de 
 | `GET` | `/purchase-requests/:id` | — | Inclui `items[]` e `events[]` (timeline, ordenada por `createdAt asc`). |
 | `POST` | `/purchase-requests` | `{ companyId, justification, priority?, items: [{ description, specification?, quantity, unit, estimatedPrice? }] }` | `items` exige ao menos 1 (`@ArrayMinSize(1)`); cria em `DRAFT`; gera evento `CREATED`. |
 | `PATCH` | `/purchase-requests/:id` | Parcial do create (sem `companyId`) | Só permitido em `DRAFT` ou `RETURNED` (`400` fora disso); se `items` for enviado, **substitui todos os itens** (delete + recreate, não faz merge). |
-| `POST` | `/purchase-requests/:id/submit` | — | `DRAFT\|RETURNED → SUBMITTED`. |
-| `POST` | `/purchase-requests/:id/approve` | — | `SUBMITTED → APPROVED`. |
-| `POST` | `/purchase-requests/:id/reject` | `{ justification }` | `SUBMITTED → REJECTED`; motivo obrigatório (mín. 3 caracteres), vai para a mensagem do evento. |
-| `POST` | `/purchase-requests/:id/return` | `{ justification }` | `SUBMITTED → RETURNED`; mesma regra de motivo obrigatório. |
-| `POST` | `/purchase-requests/:id/cancel` | `{ reason }` | Permitido a partir de `DRAFT\|SUBMITTED\|RETURNED`; motivo obrigatório. |
+| `POST` | `/purchase-requests/:id/submit` | — | `DRAFT\|RETURNED → SUBMITTED`. 🔒 `purchase_request:submit`. |
+| `POST` | `/purchase-requests/:id/approve` | — | `SUBMITTED → APPROVED`. 🔒 `purchase_request:approve`. |
+| `POST` | `/purchase-requests/:id/reject` | `{ justification }` | `SUBMITTED → REJECTED`; motivo obrigatório (mín. 3 caracteres), vai para a mensagem do evento. 🔒 `purchase_request:reject`. |
+| `POST` | `/purchase-requests/:id/return` | `{ justification }` | `SUBMITTED → RETURNED`; mesma regra de motivo obrigatório. 🔒 `purchase_request:return`. |
+| `POST` | `/purchase-requests/:id/cancel` | `{ reason }` | Permitido a partir de `DRAFT\|SUBMITTED\|RETURNED`; motivo obrigatório. 🔒 `purchase_request:cancel`. |
+
+🔒 = exige a permissão indicada, ver [seção 5.3](#53-como-o-rbac-é-aplicado-permissionsguard). `GET`,
+`POST` (criar) e `PATCH` continuam sem checagem — o solicitante consegue editar a solicitação de qualquer
+pessoa, não só a própria (nenhuma noção de "dono" no service ainda).
 
 Toda transição roda em uma função `transition()` única que: atualiza `status`, incrementa `version`, grava
 `updatedBy` e cria um `PurchaseRequestEvent`. Ver a máquina de estados completa e o gap sobre workflow
 configurável no [Database Book §3.4](../04-database/README.md#34-módulo-de-compras--solicitação-mvp-1).
 
 **O que a Especificação/Blueprint pedem e ainda não existe nesta rota:** aprovação por alçada/valor,
-aprovação paralela ou por maioria, delegação de aprovador, anexos, vínculo com filial/departamento/obra/
-centro de custo, e distinção formal solicitante×aprovador por permissão (hoje qualquer usuário autenticado
-pode chamar `/approve` — não há checagem de papel ainda).
+aprovação paralela ou por maioria, delegação de aprovador, anexos, e vínculo com filial/departamento/obra/
+centro de custo.
 
 ## 7. Health (`/health`)
 

@@ -232,7 +232,11 @@ Aprovação, Recebimentos, Assinaturas, Favoritos, Recentes. Ações rápidas in
 - **Eventos:** `PurchaseRequestSubmitted`, `ApprovalCompleted`, etc.
 - **Navegação:** ⇄ Workflow ⇄ Timeline; → Cotação (quando aprovada).
 - **Dados/API:** `GET /purchase-requests/:id`, `POST .../submit|approve|reject|return|cancel`.
-- **Regras:** rejeição/devolução/cancelamento exigem justificativa; resumo de impacto financeiro.
+- **Regras:** rejeição/devolução/cancelamento exigem justificativa; resumo de impacto financeiro. Cada ação
+  agora exige permissão do papel do usuário (ver [API Book §5.3](../05-api/README.md#53-como-o-rbac-é-aplicado-permissionsguard)) —
+  **pendência de UX:** o frontend ainda mostra os botões pra qualquer usuário e só descobre que falta
+  permissão quando a API responde `403` (mensagem exibida no card de erro da tela); ainda não esconde
+  ações que o usuário não pode executar.
 - **Auditoria:** cada transição gera evento na timeline.
 - **Status:** ✅ implementado no MVP (fluxo sequencial).
 
@@ -284,6 +288,9 @@ Aprovação, Recebimentos, Assinaturas, Favoritos, Recentes. Ações rápidas in
   `BLOCKED`, `REACTIVATED`, `INACTIVATED`.
 - **Regras:** cada transição é validada contra o status atual (`400` se a ação não for permitida — mesmo
   padrão da Solicitação de Compra); motivo obrigatório (mín. 3 caracteres) em suspender/bloquear/inativar.
+  Cada ação de homologação agora exige permissão (`supplier:*`, ver
+  [API Book §5.3](../05-api/README.md#53-como-o-rbac-é-aplicado-permissionsguard)) — mesma pendência de UX
+  da Tela 032 (frontend não esconde botões sem permissão, só mostra o erro `403` da API).
 - **Auditoria/timeline:** toda mudança de status vira um `SupplierEvent`, exibido cronologicamente.
 - **Pendências:** documentos com validade/alerta de vencimento, risco calculado e categorias de
   fornecimento (previstos na Especificação, seção 10) ainda não implementados.

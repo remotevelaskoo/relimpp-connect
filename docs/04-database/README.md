@@ -155,12 +155,17 @@ Registradas aqui para não serem perdidas — tratar como backlog de modelagem, 
 3. **RLS não implementada.** ADR-0005 propõe Row-Level Security como camada adicional; hoje o isolamento é
    só por filtro de aplicação (`where: { companyId }` nos services). Risco: um service que esqueça o
    filtro vaza dados entre empresas.
-4. **RBAC gerenciável, mas não aplicado.** `/users`, `/roles` e `/permissions` já permitem criar usuários,
-   papéis e atribuir permissões (Tela 085/086 do V10) — mas nenhum guard do NestJS **checa** `Permission`
-   antes de executar uma ação. Hoje qualquer usuário autenticado pode aprovar solicitação, homologar
-   fornecedor ou administrar papéis, independente do que `RolePermission` diga. Só 5 permissões seedadas;
-   o modelo de ações do V07 (visualizar, criar, editar, cancelar, aprovar, rejeitar, reabrir, exportar,
-   administrar — por recurso) ainda não está totalmente representado em `Permission`.
+4. **RBAC parcialmente aplicado.** `/users`, `/roles` e `/permissions` permitem criar usuários, papéis e
+   atribuir permissões (Tela 085/086 do V10), e agora um `PermissionsGuard` (ver
+   [API Book §5.3](../05-api/README.md#53-como-o-rbac-é-aplicado-permissionsguard)) checa `Permission` nas
+   transições de status de Solicitação de Compra e Fornecedor, além de travar `/users`/`/roles`/
+   `/permissions` atrás de `user:manage`. **Ainda não coberto:** `GET`/criar/editar/excluir na maioria dos
+   recursos (Empresas, Cadastros de estrutura organizacional, criar Solicitação/Fornecedor), escopo por
+   filial/obra/CC (a checagem hoje é só "o usuário tem o papel em algum lugar", não "neste registro
+   específico"), segregação de funções (nada impede o mesmo usuário de solicitar e aprovar) e alçada por
+   valor. O modelo de ações do V07 (visualizar, criar, editar, cancelar, aprovar, rejeitar, reabrir,
+   exportar, administrar — por recurso) segue parcialmente representado em `Permission` (11 permissões hoje,
+   cobrindo só company/user/purchase_request/supplier).
 5. **Sem tabela de Produto/Catálogo, Cotação, Pedido, Recebimento ou Documento fiscal.** `Supplier` já
    existe (seção 3.5), mas o schema ainda cobre só Fundação + Solicitação de Compra + Cadastro/Homologação
    de Fornecedor (Fase 1–2 do roadmap, [V01 §4](../11-blueprint/v01-visao-modulos-escopo.md#4-escopo-por-fase-alinhado-ao-roadmap)).

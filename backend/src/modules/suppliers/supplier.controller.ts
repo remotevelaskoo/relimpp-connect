@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../core/auth/permissions.guard';
+import { RequirePermission } from '../../core/auth/permission.decorator';
 import { CurrentUser } from '../../core/auth/current-user.decorator';
 import { SupplierService } from './supplier.service';
 import {
@@ -60,6 +62,8 @@ export class SupplierController {
   }
 
   @Post(':id/submit-for-review')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('supplier:submit_for_review')
   submitForReview(
     @Param('id') id: string,
     @CurrentUser() user: { id?: string },
@@ -68,6 +72,8 @@ export class SupplierController {
   }
 
   @Post(':id/approve')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('supplier:approve')
   approve(
     @Param('id') id: string,
     @Body() dto: ApproveSupplierDto,
@@ -77,6 +83,8 @@ export class SupplierController {
   }
 
   @Post(':id/suspend')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('supplier:suspend')
   suspend(
     @Param('id') id: string,
     @Body() dto: SupplierReasonDto,
@@ -86,6 +94,8 @@ export class SupplierController {
   }
 
   @Post(':id/block')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('supplier:block')
   block(
     @Param('id') id: string,
     @Body() dto: SupplierReasonDto,
@@ -95,11 +105,15 @@ export class SupplierController {
   }
 
   @Post(':id/reactivate')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('supplier:reactivate')
   reactivate(@Param('id') id: string, @CurrentUser() user: { id?: string }) {
     return this.service.reactivate(id, user?.id);
   }
 
   @Post(':id/inactivate')
+  @UseGuards(PermissionsGuard)
+  @RequirePermission('supplier:inactivate')
   inactivate(
     @Param('id') id: string,
     @Body() dto: SupplierReasonDto,

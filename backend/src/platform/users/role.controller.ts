@@ -9,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../core/auth/permissions.guard';
+import { RequirePermission } from '../../core/auth/permission.decorator';
 import { RoleService } from './role.service';
 import {
   CreateRoleDto,
@@ -18,7 +20,8 @@ import {
 
 @ApiTags('roles')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermission('user:manage')
 @Controller('roles')
 export class RoleController {
   constructor(private readonly roles: RoleService) {}
@@ -51,7 +54,8 @@ export class RoleController {
 
 @ApiTags('permissions')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermission('user:manage')
 @Controller('permissions')
 export class PermissionController {
   constructor(private readonly roles: RoleService) {}

@@ -22,7 +22,48 @@ const PERMISSIONS = [
   { resource: 'company', action: 'edit' },
   { resource: 'user', action: 'view' },
   { resource: 'user', action: 'create' },
+  // Gestão de usuários/papéis/permissões (telas de Administração).
+  { resource: 'user', action: 'manage' },
+  // Ações do fluxo de Solicitação de Compra.
+  { resource: 'purchase_request', action: 'submit' },
+  { resource: 'purchase_request', action: 'approve' },
+  { resource: 'purchase_request', action: 'reject' },
+  { resource: 'purchase_request', action: 'return' },
+  { resource: 'purchase_request', action: 'cancel' },
+  // Ações de homologação de Fornecedor.
+  { resource: 'supplier', action: 'submit_for_review' },
+  { resource: 'supplier', action: 'approve' },
+  { resource: 'supplier', action: 'suspend' },
+  { resource: 'supplier', action: 'block' },
+  { resource: 'supplier', action: 'reactivate' },
+  { resource: 'supplier', action: 'inactivate' },
 ];
+
+// Permissões atribuídas a papéis não-admin (platform_admin recebe todas, abaixo).
+// Reflete a seção 5/8.3 da Especificação: quem solicita, quem aprova, quem compra.
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  requester: ['purchase_request:submit', 'purchase_request:cancel'],
+  area_manager: [
+    'purchase_request:approve',
+    'purchase_request:reject',
+    'purchase_request:return',
+  ],
+  director: [
+    'purchase_request:approve',
+    'purchase_request:reject',
+    'purchase_request:return',
+  ],
+  buyer: [
+    'purchase_request:submit',
+    'purchase_request:cancel',
+    'supplier:submit_for_review',
+    'supplier:approve',
+    'supplier:suspend',
+    'supplier:block',
+    'supplier:reactivate',
+    'supplier:inactivate',
+  ],
+};
 
 // Categorias base configuráveis.
 const CATEGORIES = [
@@ -68,6 +109,20 @@ async function main() {
       update: {},
       create: { roleId: adminRole.id, permissionId: perm.id },
     });
+  }
+
+  for (const [roleKey, permissionKeys] of Object.entries(ROLE_PERMISSIONS)) {
+    const role = await prisma.role.findUniqueOrThrow({ where: { key: roleKey } });
+    for (const permissionKey of permissionKeys) {
+      const permission = await prisma.permission.findUniqueOrThrow({
+        where: { key: permissionKey },
+      });
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
+        update: {},
+        create: { roleId: role.id, permissionId: permission.id },
+      });
+    }
   }
 
   for (const c of CATEGORIES) {

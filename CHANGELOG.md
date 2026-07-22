@@ -12,6 +12,7 @@ O formato seguirá os princípios de **Keep a Changelog** e versionamento semân
 
 ### Adicionado
 
+- RBAC aplicado (não só cadastrado): `PermissionsGuard` + `@RequirePermission` travando as transições de status de Solicitação de Compra e Fornecedor, e todo o `/users`/`/roles`/`/permissions` atrás de `user:manage`. Seed atualizado com permissões por papel (`requester`, `area_manager`/`director`, `buyer`); `platform_admin` sempre tem acesso total.
 - Gestão de Usuários e Perfis: CRUD de usuários (com redefinição de senha e vínculo de empresa), atribuição de papel+escopo (`/users/:id/role-scopes`), CRUD de papéis e edição do conjunto de permissões de cada papel. Backend (`/users`, `/roles`, `/permissions`) e frontend (Administração → Cadastros → Usuários/Perfis).
 - `infrastructure/local-db-windows/`: PostgreSQL local persistente para Windows sem Docker e sem privilégios de administrador (binários oficiais do Postgres 16 via `embedded-postgres`, mesmas credenciais do `docker-compose.dev.yml`).
 - Estrutura inicial de governança e documentação.
