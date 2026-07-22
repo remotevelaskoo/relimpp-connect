@@ -42,11 +42,11 @@ const MENU: MenuGroup[] = [
   {
     label: 'Administração · Cadastros',
     items: [
-      { icon: '🏢', href: '/dashboard/empresas', label: 'Empresas' },
-      { icon: '🏬', href: '/dashboard/filiais', label: 'Filiais' },
-      { icon: '🗂️', href: '/dashboard/departamentos', label: 'Departamentos' },
-      { icon: '💲', href: '/dashboard/centros-de-custo', label: 'Centros de Custo' },
-      { icon: '👷', href: '/dashboard/obras', label: 'Obras' },
+      { icon: '🏢', href: '/dashboard/admin/cadastros/empresas', label: 'Empresas' },
+      { icon: '🏬', href: '/dashboard/admin/cadastros/filiais', label: 'Filiais' },
+      { icon: '🗂️', href: '/dashboard/admin/cadastros/departamentos', label: 'Departamentos' },
+      { icon: '💲', href: '/dashboard/admin/cadastros/centros-de-custo', label: 'Centros de Custo' },
+      { icon: '👷', href: '/dashboard/admin/cadastros/obras', label: 'Obras' },
     ],
   },
 ];

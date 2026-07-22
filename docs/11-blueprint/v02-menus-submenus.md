@@ -71,9 +71,12 @@ Detalhado em [V09 — Central de Administração](v09-central-administracao.md).
 | **Impostos** | `/admin/cadastros/impostos` | Tributos e alíquotas |
 | **Tipos de Documento** | `/admin/cadastros/tipos-documento` | Classificação de documentos |
 
-> **Nota de realinhamento:** no MVP atual, os cadastros de estrutura organizacional (Empresas, Filiais,
-> Departamentos, Obras, Centros de Custo) estão sob um menu provisório "Cadastros". A referência oficial
-> passa a ser **Administração → Cadastros** (esta tabela). O código será realinhado a esta estrutura.
+> **Nota de implementação:** os 5 cadastros de estrutura organizacional (Empresas, Filiais, Departamentos,
+> Centros de Custo, Obras) já estão implementados e nesteados sob Administração → Cadastros na sidebar. A
+> única diferença é o prefixo de rota: o frontend usa `/dashboard` como segmento de shell autenticado (o
+> mesmo padrão de `/dashboard/compras/...` e `/dashboard/meu-trabalho`), então as rotas reais são
+> `/dashboard/admin/cadastros/<entidade>` em vez de `/admin/cadastros/<entidade>`. Os demais 13 cadastros
+> desta tabela ainda não têm tela — ver [V10](v10-catalogo-telas.md) faixa 080–089.
 
 ## 4. Padrão visual do menu
 

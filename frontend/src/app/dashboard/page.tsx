@@ -72,7 +72,7 @@ export default function DashboardHome() {
       value: companies.length,
       title: 'Empresas cadastradas',
       hint: 'Administração',
-      href: '/dashboard/empresas',
+      href: '/dashboard/admin/cadastros/empresas',
       accent: 'text-slate-700',
     },
   ];
