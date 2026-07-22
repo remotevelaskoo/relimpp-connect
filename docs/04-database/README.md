@@ -1,8 +1,8 @@
 # Database Book
 
-- Documento: Modelo de dados do Relimpp Connect (Core Platform + módulo de Compras)
+- Documento: Modelo de dados do Relimpp Connect (Core Platform + Compras + Fornecedores)
 - Fonte da verdade: [`backend/prisma/schema.prisma`](../../backend/prisma/schema.prisma)
-- Status: 🔄 reflete o schema do **MVP 0/1** (fundação + solicitação de compra). Cresce junto com o código.
+- Status: 🔄 reflete o schema do **MVP 0/1** (fundação + solicitação de compra + fornecedores). Cresce junto com o código.
 - Referenciado por: [Blueprint V11](../11-blueprint/README.md), [ADR-0005 — Estratégia multiempresa](../03-architecture/adr/ADR-0005-estrategia-multiempresa.md)
 
 > Este documento é gerado/atualizado a partir do schema real, não é uma proposta. Qualquer divergência
@@ -27,6 +27,7 @@ Company 1──* Project            (= "Obras" no produto/UI)
 Company 1──* CostCenter
 Company 1──* User
 Company 1──* PurchaseRequest
+Company 1──* Supplier
 
 User 1──* UserRoleScope *──1 Role 1──* RolePermission *──1 Permission
 
@@ -34,6 +35,9 @@ PurchaseRequest 1──* PurchaseRequestItem
 PurchaseRequest 1──* PurchaseRequestEvent
 PurchaseRequest *──1 Company
 PurchaseRequest *──1 User (requester)
+
+Supplier 1──* SupplierEvent
+Supplier *──1 Company
 
 Category  (tabela solta, sem FK — classificação genérica por "type")
 ```
@@ -94,6 +98,32 @@ status permitido retorna `400 Bad Request`. Isso é o Workflow Engine simplifica
 Blueprint preveem um motor de workflow configurável (etapas, alçadas, aprovação paralela) que **ainda não
 existe** — hoje é um fluxo sequencial fixo, hardcoded no service.
 
+### 3.5 Fornecedores — cadastro e homologação
+
+| Tabela | Campos próprios | Relacionamentos | Observações |
+|---|---|---|---|
+| **Supplier** | `name`, `tradeName?`, `cnpj?`, `email?`, `phone?`, `status` (ver máquina de estados abaixo), `active` | N—1 Company, 1—N SupplierEvent | `@@unique([companyId, cnpj])` — mesmo CNPJ pode existir em empresas diferentes, mas não duas vezes na mesma empresa (múltiplos `cnpj = null` são permitidos, o Postgres não considera `NULL` colisão de unicidade). **Sem** endereços, categorias de fornecimento ou dados bancários ainda — a Especificação (seção 10) prevê esses campos. |
+| **SupplierEvent** | `type`, `message`, `actorId?` | N—1 Supplier (`onDelete: Cascade`) | Timeline do fornecedor, mesmo padrão de `PurchaseRequestEvent`. |
+
+#### Máquina de estados de `Supplier.status`
+
+```text
+PRE_REGISTERED ──submit-for-review──▶ UNDER_REVIEW ──approve────────▶ APPROVED ─┐
+        │                                    │                                  │
+        │                                    └──approve(restricted)──▶ RESTRICTED│
+        │                                                                        │
+        ├──block──────────────────────────────────────────────────────▶ BLOCKED  │◀── suspend
+        ├──inactivate─────────────────────────────────────────────────▶ INACTIVE │
+        │                                                                        │
+        └── (a partir de UNDER_REVIEW/APPROVED/RESTRICTED/SUSPENDED também podem ir a BLOCKED/INACTIVE)
+
+SUSPENDED ──reactivate──▶ APPROVED          BLOCKED ──reactivate──▶ APPROVED
+```
+
+Mesmo padrão de `ensureStatus()`/`transition()` do `PurchaseRequestService` — ver
+[API Book §4](../05-api/README.md#4-fornecedores-suppliers) para a lista de transições permitidas por
+status. `suspend`, `block` e `inactivate` exigem motivo (mín. 3 caracteres), gravado na mensagem do evento.
+
 ## 4. Migrações
 
 | Migração | O que adiciona |
@@ -101,6 +131,7 @@ existe** — hoje é um fluxo sequencial fixo, hardcoded no service.
 | `20260721192635_init` | Schema inicial completo (organização, RBAC, categorias). |
 | `20260721200254_add_department_code` | Adiciona `code` a `Department`. |
 | `20260721210854_purchasing_requests` | Tabelas `PurchaseRequest`, `PurchaseRequestItem`, `PurchaseRequestEvent`. |
+| `20260721213000_add_suppliers` | Tabelas `Supplier`, `SupplierEvent`. **Escrita à mão** (sem `prisma migrate dev`) — este ambiente não tinha PostgreSQL disponível para gerar a migração automaticamente; a sintaxe segue exatamente o padrão das migrações anteriores. Rode `prisma migrate deploy` (ou `db push` num ambiente de teste) para validar antes do próximo `migrate dev`. |
 
 Gerar nova migração: `cd backend && npm run prisma:migrate` (ver [AGENTS.md](../../AGENTS.md) para o
 gotcha de shadow database em ambientes sem Docker).
@@ -127,8 +158,9 @@ Registradas aqui para não serem perdidas — tratar como backlog de modelagem, 
 4. **RBAC minimalista.** Só 5 permissões seedadas; o modelo de ações do V07 (visualizar, criar, editar,
    cancelar, aprovar, rejeitar, reabrir, exportar, administrar — por recurso) ainda não está totalmente
    representado em `Permission`.
-5. **Sem tabela de Fornecedor, Produto/Catálogo, Cotação, Pedido, Recebimento ou Documento fiscal.** O
-   schema cobre só Fundação + Solicitação de Compra (Fase 1–2 do roadmap, [V01 §4](../11-blueprint/v01-visao-modulos-escopo.md#4-escopo-por-fase-alinhado-ao-roadmap)).
-   Essas entidades entram quando os módulos correspondentes forem implementados (Onda 2/3 do Blueprint).
+5. **Sem tabela de Produto/Catálogo, Cotação, Pedido, Recebimento ou Documento fiscal.** `Supplier` já
+   existe (seção 3.5), mas o schema ainda cobre só Fundação + Solicitação de Compra + Cadastro/Homologação
+   de Fornecedor (Fase 1–2 do roadmap, [V01 §4](../11-blueprint/v01-visao-modulos-escopo.md#4-escopo-por-fase-alinhado-ao-roadmap)).
+   As demais entidades entram quando os módulos correspondentes forem implementados (Onda 2/3 do Blueprint).
 6. **`version` é um contador, não um lock otimista real.** Incrementa a cada update mas nenhuma rota
    ainda valida `version` recebida vs. atual antes de gravar — colisões concorrentes não são detectadas.

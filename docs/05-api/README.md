@@ -1,6 +1,6 @@
 # API Book
 
-- Documento: API do Relimpp Connect (Core Platform + módulo de Compras)
+- Documento: API do Relimpp Connect (Core Platform + Compras + Fornecedores)
 - Fonte da verdade: controllers em [`backend/src`](../../backend/src) + Swagger gerado em runtime
   (`GET /api/v1/docs`, a partir de `backend/src/main.ts`)
 - Status: 🔄 reflete o **MVP 0/1**. Cresce junto com o código — módulos futuros (Cotação, Pedido,
@@ -26,8 +26,8 @@
 - **Paginação:** **não implementada.** Todo `list()` retorna a coleção inteira (`findMany` sem `skip`/`take`).
   Ok para o volume de dados do MVP; será necessário antes de qualquer tabela crescer muito.
 - **Auditoria de API:** não há middleware de log de requisição/auditoria ainda — os únicos registros de
-  auditoria hoje são os eventos de `PurchaseRequestEvent` (ver seção 4) e os campos `createdBy`/`updatedBy`
-  nas entidades que os têm.
+  auditoria hoje são os eventos de `PurchaseRequestEvent` (seção 5) e `SupplierEvent` (seção 4), e os
+  campos `createdBy`/`updatedBy` nas entidades que os têm.
 
 ## 2. Auth (`/auth`)
 
@@ -68,7 +68,32 @@ As quatro rotas compartilham o mesmo `BaseOrgUnitController` genérico — mesmo
 > (ver [Database Book §6.1](../04-database/README.md#6-divergências-conhecidas-entre-o-blueprintespecificação-e-o-schema-atual)).
 > O frontend já traduz isso na UI (`/dashboard/obras` chama a API em `/projects`).
 
-## 4. Compras — Solicitação (`/purchase-requests`)
+## 4. Fornecedores (Suppliers) (`/suppliers`)
+
+| Método | Rota | Corpo | Regras |
+|---|---|---|---|
+| `GET` | `/suppliers?companyId=` | — | Lista com `company` incluído. |
+| `GET` | `/suppliers/:id` | — | Inclui `events[]` (timeline, ordenada por `createdAt asc`). |
+| `POST` | `/suppliers` | `{ companyId, name, tradeName?, cnpj?, email?, phone? }` | Cria em `PRE_REGISTERED`; gera evento `CREATED`; `409` se `(companyId, cnpj)` duplicado. |
+| `PATCH` | `/suppliers/:id` | Parcial do create + `active?` (sem `companyId`) | `400` se o fornecedor estiver `BLOCKED`. |
+| `DELETE` | `/suppliers/:id` | — | `409` fora de `PRE_REGISTERED` — para os demais status, use `inactivate`. |
+| `POST` | `/suppliers/:id/submit-for-review` | — | `PRE_REGISTERED → UNDER_REVIEW`. |
+| `POST` | `/suppliers/:id/approve` | `{ restricted?: boolean }` | `UNDER_REVIEW → APPROVED` (ou `RESTRICTED` se `restricted: true`). |
+| `POST` | `/suppliers/:id/suspend` | `{ reason }` | `APPROVED\|RESTRICTED → SUSPENDED`; motivo obrigatório. |
+| `POST` | `/suppliers/:id/block` | `{ reason }` | De qualquer status exceto `BLOCKED\|INACTIVE → BLOCKED`; motivo obrigatório. |
+| `POST` | `/suppliers/:id/reactivate` | — | `SUSPENDED\|BLOCKED → APPROVED`. |
+| `POST` | `/suppliers/:id/inactivate` | `{ reason }` | De qualquer status exceto `BLOCKED → INACTIVE`; motivo obrigatório. |
+
+Mesmo padrão de `ensureStatus()`/`transition()` do módulo de Compras — ver a máquina de estados completa em
+[Database Book §3.5](../04-database/README.md#35-fornecedores--cadastro-e-homologação).
+
+**O que a Especificação/Blueprint pedem e ainda não existe nesta rota:** endereços, categorias de
+fornecimento, dados bancários, documentos com validade/vencimento, avaliação de desempenho, cálculo de
+risco, e qualquer checagem de papel/permissão nas ações de homologação (hoje qualquer usuário autenticado
+pode aprovar/bloquear um fornecedor). Este `/suppliers` é o cadastro interno — **não** é o Portal do
+Fornecedor (autenticação externa do próprio fornecedor), que continua sem nenhuma rota (ver seção 7).
+
+## 5. Compras — Solicitação (`/purchase-requests`)
 
 | Método | Rota | Corpo | Regras |
 |---|---|---|---|
@@ -91,13 +116,13 @@ aprovação paralela ou por maioria, delegação de aprovador, anexos, vínculo 
 centro de custo, e distinção formal solicitante×aprovador por permissão (hoje qualquer usuário autenticado
 pode chamar `/approve` — não há checagem de papel ainda).
 
-## 5. Health (`/health`)
+## 6. Health (`/health`)
 
 | Método | Rota | Auth | Retorno |
 |---|---|---|---|
 | `GET` | `/health` | Pública | `{ status: "ok"\|"degraded", database: "up"\|"down", timestamp }` — testa o banco com `SELECT 1`. |
 
-## 6. Endpoints previstos e ainda inexistentes
+## 7. Endpoints previstos e ainda inexistentes
 
 Para não perder o mapeamento entre o que o Blueprint promete e o que a API já cobre:
 
@@ -105,7 +130,7 @@ Para não perder o mapeamento entre o que o Blueprint promete e o que a API já 
 |---|---|---|
 | Usuários/Perfis (V07, admin/cadastros/usuarios) | `/users`, `/roles`, `/permissions` (CRUD) | ⬜ só leitura interna via seed; sem controller HTTP para gerenciar. |
 | Cotação/Comparação (V03 §3.3) | `/quotations`, `/quotations/:id/invite` | ⬜ nada implementado. |
-| Portal do Fornecedor (V08) | `/portal/*` (namespace separado, auth de fornecedor) | ⬜ nada implementado — nem model de Fornecedor existe no schema. |
+| Portal do Fornecedor (V08) | `/portal/*` (namespace separado, auth de fornecedor) | ⬜ nada implementado. O cadastro **interno** de fornecedor já existe (seção 4), mas o Portal (login e ações do próprio fornecedor) é auth/UI separado e continua sem nenhuma rota. |
 | Pedido de Compra (V03 §3.4) | `/purchase-orders` | ⬜ nada implementado. |
 | Recebimento / Fiscal | `/receipts`, `/fiscal-documents` | ⬜ nada implementado. |
 | Busca Global (V04 §1) | `/search?q=` | ⬜ nada implementado. |

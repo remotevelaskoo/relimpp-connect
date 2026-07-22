@@ -23,3 +23,6 @@ O formato seguirá os princípios de **Keep a Changelog** e versionamento semân
 - Módulo de Compras (MVP 1): solicitação de compra com itens, fluxo de aprovação (rascunho → em aprovação → aprovada/rejeitada/devolvida/cancelada) e timeline de eventos por solicitação.
 - Schema Prisma inicial do Core Platform, migração `init` e seed (papéis, permissões, categorias e usuário administrador).
 - `docker-compose.dev.yml` (PostgreSQL) e arquivos `.env.example` de backend e frontend.
+- Documentação do Database Book e do API Book (`docs/04-database`, `docs/05-api`) derivada do schema e dos controllers reais, substituindo os stubs iniciais.
+- Cadastros (Empresas, Filiais, Departamentos, Centros de Custo, Obras) nesteados sob Administração → Cadastros no frontend, alinhado ao Blueprint V02.
+- Módulo de Fornecedores: cadastro, edição e fluxo de homologação (pré-cadastro → em análise → homologado/homologado com restrição → suspenso/bloqueado/inativo), com timeline de eventos. Backend (`Supplier`, `SupplierEvent`, `/suppliers`) e frontend (lista + detalhe em Administração → Cadastros → Fornecedores).

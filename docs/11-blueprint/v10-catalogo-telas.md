@@ -97,9 +97,9 @@ Tela NNN — <Nome>
 | 064 | Portal — Mensagens da Cotação | ⬜ |
 | 065 | Portal — Meus Pedidos | ⬜ |
 | 066 | Portal — Meus Documentos | ⬜ |
-| 067 | Fornecedores (lista, interno) | ⬜ |
+| 067 | Fornecedores (lista, interno) | ✅ |
 | 068 | Fornecedor (detalhe, interno) | ✅ |
-| 069 | Homologação de Fornecedor | ⬜ |
+| 069 | Homologação de Fornecedor | ↗ (ações dentro da Tela 068) |
 
 ### 070–079 · Catálogo
 | Tela | Nome | Status |
@@ -249,18 +249,47 @@ Aprovação, Recebimentos, Assinaturas, Favoritos, Recentes. Ações rápidas in
 - **Regras:** após envio, alterações geram nova versão e notificam; bloqueio após encerramento.
 - **Status:** ⬜ a implementar. Ver [V08](v08-portal-fornecedor.md).
 
+### Tela 067 — Fornecedores (lista, interno)
+- **Módulo:** Fornecedores · **Rota:** `/dashboard/admin/cadastros/fornecedores`
+- **Objetivo:** listar fornecedores da empresa selecionada e pré-cadastrar um novo.
+- **Perfis/permissões:** qualquer usuário autenticado (RBAC granular ainda não aplicado — ver
+  [Database Book §6.4](../04-database/README.md#6-divergências-conhecidas-entre-o-blueprintespecificação-e-o-schema-atual)).
+- **Layout:** seletor de empresa + formulário de pré-cadastro (razão social, nome fantasia, CNPJ, e-mail,
+  telefone) + tabela (razão social, CNPJ, e-mail, status).
+- **Ações:** pré-cadastrar (→ status `PRE_REGISTERED`); abrir (→ Tela 068).
+- **Estados:** vazio ("Nenhum fornecedor cadastrado ainda"), carregando, erro.
+- **Navegação:** Administração › Cadastros › Fornecedores → Tela 068.
+- **Dados/API:** `GET /suppliers?companyId=`, `POST /suppliers` — ver [API Book §4](../05-api/README.md#4-fornecedores-suppliers).
+- **Status:** ✅ implementado no MVP.
+
 ### Tela 068 — Fornecedor (detalhe, interno)
-- **Módulo:** Fornecedores · **Rota:** `/admin/cadastros/fornecedores/:id`
-- **Objetivo:** visão 360º do fornecedor.
-- **Layout (abas):** Dados · Documentos · Histórico · Avaliações · Pedidos · Cotações · Financeiro ·
-  Contratos · Ocorrências · Dashboard · Timeline.
-- **Campos (Dados):** razão social, nome fantasia, CNPJ, contatos, endereços, categorias, dados bancários
-  (sensível — acesso restrito).
-- **Status do fornecedor:** Pré-cadastro, Em análise, Homologado, Restrito, Suspenso, Bloqueado, Inativo.
-- **Ações:** editar, homologar (→ 069), suspender/bloquear (com motivo/auditoria).
-- **Regras:** documentos com validade e alerta de vencimento; risco calculado (docs vencidos/bloqueios).
-- **Auditoria/timeline:** todas as mudanças de status e documentos.
-- **Status:** ⬜ a implementar.
+- **Módulo:** Fornecedores · **Rota:** `/dashboard/admin/cadastros/fornecedores/:id`
+- **Objetivo:** visualizar, editar e conduzir a homologação do fornecedor.
+- **Layout implementado:** cabeçalho com nome + badge de status, botões de ação conforme o status atual,
+  bloco de dados (ou formulário de edição) e **Timeline**. As demais abas da visão 360º pretendida
+  (Documentos, Histórico, Avaliações, Pedidos, Cotações, Financeiro, Contratos, Ocorrências, Dashboard)
+  **ainda não existem** — dependem de módulos que não foram implementados (Documentos, Cotação, Pedido,
+  Avaliação de fornecedor).
+- **Campos (Dados):** razão social, nome fantasia, CNPJ, e-mail, telefone. Endereços, categorias e dados
+  bancários **não estão no schema atual** (ver [Database Book](../04-database/README.md)).
+- **Status do fornecedor:** Pré-cadastro, Em análise, Homologado, Homologado com restrição, Suspenso,
+  Bloqueado, Inativo (`PRE_REGISTERED · UNDER_REVIEW · APPROVED · RESTRICTED · SUSPENDED · BLOCKED · INACTIVE`).
+- **Ações (por status):** enviar para análise (`PRE_REGISTERED → UNDER_REVIEW`), homologar / homologar com
+  restrição (`UNDER_REVIEW → APPROVED/RESTRICTED`), suspender (`APPROVED/RESTRICTED → SUSPENDED`, motivo
+  obrigatório), bloquear (motivo obrigatório), reativar (`SUSPENDED/BLOCKED → APPROVED`), inativar (motivo
+  obrigatório), editar dados (bloqueado apenas quando `BLOCKED`), excluir (só em `PRE_REGISTERED`).
+- **Homologação (Tela 069):** não é uma tela separada — as ações de homologar/restringir/suspender/
+  bloquear/reativar/inativar estão nesta própria tela, cada uma com evento próprio na timeline.
+- **Eventos:** `CREATED`, `SUBMITTED_FOR_REVIEW`, `APPROVED`, `APPROVED_WITH_RESTRICTION`, `SUSPENDED`,
+  `BLOCKED`, `REACTIVATED`, `INACTIVATED`.
+- **Regras:** cada transição é validada contra o status atual (`400` se a ação não for permitida — mesmo
+  padrão da Solicitação de Compra); motivo obrigatório (mín. 3 caracteres) em suspender/bloquear/inativar.
+- **Auditoria/timeline:** toda mudança de status vira um `SupplierEvent`, exibido cronologicamente.
+- **Pendências:** documentos com validade/alerta de vencimento, risco calculado e categorias de
+  fornecimento (previstos na Especificação, seção 10) ainda não implementados.
+- **Dados/API:** `GET/PATCH/DELETE /suppliers/:id`, `POST /suppliers/:id/{submit-for-review,approve,
+  suspend,block,reactivate,inactivate}` — ver [API Book §4](../05-api/README.md#4-fornecedores-suppliers).
+- **Status:** ✅ implementado no MVP (homologação básica; visão 360º completa é trabalho futuro).
 
 ### Tela 070 — Produto (detalhe)
 - **Módulo:** Catálogo · **Rota:** `/admin/cadastros/produtos/:id`

@@ -60,7 +60,7 @@ Detalhado em [V09 — Central de Administração](v09-central-administracao.md).
 | **Usuários** | `/admin/cadastros/usuarios` | Vínculo organizacional + papéis |
 | **Perfis** | `/admin/cadastros/perfis` | Papéis e conjuntos de permissão |
 | **Clientes** | `/admin/cadastros/clientes` | Base de clientes |
-| **Fornecedores** | `/admin/cadastros/fornecedores` | Cadastro + homologação |
+| **Fornecedores** | `/admin/cadastros/fornecedores` | Cadastro + homologação — ✅ implementado, ver [Tela 067/068](v10-catalogo-telas.md) |
 | **Produtos** | `/admin/cadastros/produtos` | Catálogo de produtos |
 | **Serviços** | `/admin/cadastros/servicos` | Catálogo de serviços |
 | **Categorias** | `/admin/cadastros/categorias` | Tipos de compra/fornecedor/documento/etc. |
@@ -71,12 +71,13 @@ Detalhado em [V09 — Central de Administração](v09-central-administracao.md).
 | **Impostos** | `/admin/cadastros/impostos` | Tributos e alíquotas |
 | **Tipos de Documento** | `/admin/cadastros/tipos-documento` | Classificação de documentos |
 
-> **Nota de implementação:** os 5 cadastros de estrutura organizacional (Empresas, Filiais, Departamentos,
-> Centros de Custo, Obras) já estão implementados e nesteados sob Administração → Cadastros na sidebar. A
-> única diferença é o prefixo de rota: o frontend usa `/dashboard` como segmento de shell autenticado (o
-> mesmo padrão de `/dashboard/compras/...` e `/dashboard/meu-trabalho`), então as rotas reais são
-> `/dashboard/admin/cadastros/<entidade>` em vez de `/admin/cadastros/<entidade>`. Os demais 13 cadastros
-> desta tabela ainda não têm tela — ver [V10](v10-catalogo-telas.md) faixa 080–089.
+> **Nota de implementação:** 6 dos 18 cadastros já estão implementados e nesteados sob Administração →
+> Cadastros na sidebar: os 5 de estrutura organizacional (Empresas, Filiais, Departamentos, Centros de
+> Custo, Obras) e Fornecedores (cadastro + homologação). A única diferença de rota é o prefixo: o frontend
+> usa `/dashboard` como segmento de shell autenticado (o mesmo padrão de `/dashboard/compras/...` e
+> `/dashboard/meu-trabalho`), então as rotas reais são `/dashboard/admin/cadastros/<entidade>` em vez de
+> `/admin/cadastros/<entidade>`. Os demais 12 cadastros desta tabela ainda não têm tela — ver
+> [V10](v10-catalogo-telas.md) faixa 080–089.
 
 ## 4. Padrão visual do menu
 

@@ -47,6 +47,7 @@ const MENU: MenuGroup[] = [
       { icon: '🗂️', href: '/dashboard/admin/cadastros/departamentos', label: 'Departamentos' },
       { icon: '💲', href: '/dashboard/admin/cadastros/centros-de-custo', label: 'Centros de Custo' },
       { icon: '👷', href: '/dashboard/admin/cadastros/obras', label: 'Obras' },
+      { icon: '🚛', href: '/dashboard/admin/cadastros/fornecedores', label: 'Fornecedores' },
     ],
   },
 ];
